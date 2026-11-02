@@ -698,7 +698,7 @@ export interface SpotExecutionRulesResponse {
 export interface SpotExecutionRulesParams {
   symbol?: string;
   symbols?: string[];
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
 }
 
 /** Successful GET /api/v3/referencePrice (referencePrice null = not currently set). */

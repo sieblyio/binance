@@ -870,7 +870,7 @@ export class MainClient extends BaseRestClient {
 
   getReferencePriceCalculation(params: {
     symbol: string;
-    symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+    symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
   }): Promise<SpotReferencePriceCalculationResponse> {
     return this.get('api/v3/referencePrice/calculation', params);
   }
