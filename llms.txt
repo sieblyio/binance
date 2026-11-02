@@ -1762,6 +1762,400 @@ const optionsExpiration = '260128'; // YYMMDD
 // wsClient.subscribeContractInfoStream('coinm');
 
 ================
+File: examples/WebSockets/Public/ws-usdm-market.ts
+================
+import {
+  DefaultLogger,
+  isWsDiffBookDepthEventFormatted,
+  isWsPartialBookDepthEventFormatted,
+  WebsocketClient,
+  WS_KEY_MAP,
+} from '../../../src';
+⋮----
+// or, with the npm package
+/*
+import {
+  DefaultLogger,
+  isWsDiffBookDepthEventFormatted,
+  isWsPartialBookDepthEventFormatted,
+  WebsocketClient,
+  WS_KEY_MAP,
+} from 'binance';
+*/
+⋮----
+// Without typescript:
+// const logger = {
+⋮----
+// A simple way to suppress heartbeats but receive all other traces
+// if (params[0].includes('ping') || params[0].includes('pong')) {
+//   return;
+// }
+⋮----
+// Optional: when enabled, the SDK will try to format incoming data into more readable objects.
+// Beautified data is emitted via the "formattedMessage" event
+⋮----
+logger, // Optional: customise logging behaviour by extending or overwriting the default logger implementation
+⋮----
+// Raw unprocessed incoming data, e.g. if you have the beautifier disabled
+⋮----
+// console.log('raw message received ', JSON.stringify(data, null, 2));
+⋮----
+// console.log('log rawMessage: ', data);
+⋮----
+// Formatted data that has gone through the beautifier
+⋮----
+// console.log('log formattedMessage: ', data);
+⋮----
+/**
+     * Optional: we've included type-guards for many formatted websocket topics.
+     *
+     * These can be used within `if` blocks to narrow down specific event types (even for non-typescript users).
+     */
+// if (isWsAggTradeFormatted(data)) {
+//   console.log('log agg trade: ', data);
+//   return;
+// }
+⋮----
+// // For one symbol
+// if (isWsFormattedMarkPriceUpdateEvent(data)) {
+//   console.log('log mark price: ', data);
+//   return;
+// }
+⋮----
+// // for many symbols
+// if (isWsFormattedMarkPriceUpdateArray(data)) {
+//   console.log('log mark prices: ', data);
+//   return;
+// }
+⋮----
+// if (isWsFormattedKline(data)) {
+//   console.log('log kline: ', data);
+//   return;
+// }
+⋮----
+// if (isWsFormattedTrade(data)) {
+//   return console.log('log trade: ', data);
+// }
+⋮----
+// if (isWsFormattedForceOrder(data)) {
+//   return console.log('log force order: ', data);
+// }
+⋮----
+// if (isWsFormatted24hrTickerArray(data)) {
+//   return console.log('log 24hr ticker array: ', data);
+// }
+⋮----
+// if (isWsFormattedRollingWindowTickerArray(data)) {
+//   return console.log('log rolling window ticker array: ', data);
+// }
+⋮----
+// if (isWsFormatted24hrTicker(data)) {
+//   return console.log('log 24hr ticker: ', data);
+// }
+⋮----
+// response to command sent via WS stream (e.g LIST_SUBSCRIPTIONS)
+⋮----
+// No action needed here, unless you need to query the REST API after being reconnected.
+⋮----
+/**
+     * The Websocket Client will automatically manage connectivity and active topics/subscriptions for you.
+     *
+     * Simply call wsClient.subscribe(topic, wsKey) as many times as you want, with or without an array.
+     *
+     * The WsKey is a reference to the connection that this topic should be routed to.
+     * WS_KEY_MAP is a complete enum with all the available WsKey values.
+     *
+     * The following topics are routed to the "market" endpoint for USDM Futures market data, as per the following documentation:
+     * https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
+     */
+⋮----
+// Uses the regular market feeds WS URL dedicated to USDM Futures: wss://fstream.binance.com/market/stream
+⋮----
+/**
+     * Subscribe to each available type of USDM Derivatives market topic, the new way
+     */
+⋮----
+// Aggregate Trade Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Aggregate-Trade-Streams
+⋮----
+// Mark Price Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Mark-Price-Stream
+⋮----
+// Mark Price Stream for All market
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Mark-Price-Stream-for-All-market
+⋮----
+// Kline/Candlestick Streams
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Kline-Candlestick-Streams
+⋮----
+// Continuous Contract Kline/Candlestick Streams
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Continuous-Contract-Kline-Candlestick-Streams
+'btcusdt_perpetual@continuousKline_1m', // DOESNT EXIST AS TYPE GUARD, ONLY IN BEAUTIFIER
+⋮----
+// Individual Symbol Mini Ticker Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Individual-Symbol-Mini-Ticker-Stream
+'btcusdt@miniTicker', // DOESNT EXIST AS TYPE GUARD, ONLY FOR RAW MESSAGE
+⋮----
+// All Market Mini Tickers Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Market-Mini-Tickers-Stream
+'!miniTicker@arr', // DOESNT EXIST AS TYPE GUARD
+⋮----
+// Individual Symbol Ticker Streams
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Individual-Symbol-Ticker-Streams
+⋮----
+// All Market Tickers Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Market-Tickers-Stream
+'!ticker@arr', // DOESNT EXIST AS TYPE GUARD
+⋮----
+// Liquidation Order Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Liquidation-Order-Streams
+⋮----
+// Liquidation Order Stream for All market
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Market-Liquidation-Order-Streams
+⋮----
+// Composite Index Symbol Information Streams
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Composite-Index-Symbol-Information-Streams
+⋮----
+'btcusdt@compositeIndex', // DOESNT EXIST AS TYPE GUARD
+// Contract Info Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Contract-Info-Stream
+'!contractInfo', // DOESNT EXIST AS TYPE GUARD
+⋮----
+// Multi-Assets Mode Asset Index Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Multi-Assets-Mode-Asset-Index
+'!assetIndex@arr', // DOESNT EXIST AS TYPE GUARD
+⋮----
+// /**
+//  *
+//  * For those that used the Node.js Binance SDK before the v3 release, you can
+//  * still subscribe to available market topics the "old" way, for convenience
+//  * when migrating from the old WebsocketClient to the new multiplex client):
+//  *
+//  */
+⋮----
+// wsClient.subscribeAggregateTrades(symbol, 'usdm');
+// wsClient.subscribeTrades(symbol, 'spot');
+// wsClient.subscribeTrades(symbol, 'usdm');
+// wsClient.subscribeTrades(coinMSymbol, 'coinm');
+// wsClient.subscribeCoinIndexPrice(coinMSymbol2);
+// wsClient.subscribeAllBookTickers('usdm');
+// wsClient.subscribeSpotKline(symbol, '1m');
+// wsClient.subscribeMarkPrice(symbol, 'usdm');
+// wsClient.subscribeMarkPrice(coinMSymbol, 'coinm');
+// wsClient.subscribeAllMarketMarkPrice('usdm');
+// wsClient.subscribeAllMarketMarkPrice('coinm');
+// wsClient.subscribeKlines(symbol, '1m', 'usdm');
+// wsClient.subscribeContinuousContractKlines(
+//   symbol,
+//   'perpetual',
+//   '1m',
+//   'usdm',
+// );
+// wsClient.subscribeIndexKlines(coinMSymbol2, '1m');
+// wsClient.subscribeMarkPriceKlines(coinMSymbol, '1m');
+// wsClient.subscribeSymbolMini24hrTicker(symbol, 'spot'); // 0116 265 5309, opt 1
+// wsClient.subscribeSymbolMini24hrTicker(symbol, 'usdm');
+// wsClient.subscribeSymbolMini24hrTicker(coinMSymbol, 'coinm');
+// wsClient.subscribeSymbol24hrTicker(symbol, 'spot');
+// wsClient.subscribeSymbol24hrTicker(symbol, 'usdm');
+// wsClient.subscribeSymbol24hrTicker(coinMSymbol, 'coinm');
+// wsClient.subscribeAllMini24hrTickers('spot');
+// wsClient.subscribeAllMini24hrTickers('usdm');
+// wsClient.subscribeAllMini24hrTickers('coinm');
+// wsClient.subscribeAll24hrTickers('spot');
+// wsClient.subscribeAll24hrTickers('usdm');
+// wsClient.subscribeAll24hrTickers('coinm');
+// wsClient.subscribeSymbolLiquidationOrders(symbol, 'usdm');
+// wsClient.subscribeAllLiquidationOrders('usdm');
+// wsClient.subscribeAllLiquidationOrders('coinm');
+// wsClient.subscribeSpotSymbol24hrTicker(symbol);
+// wsClient.subscribeSpotPartialBookDepth('ETHBTC', 5, 1000);
+// wsClient.subscribeAllRollingWindowTickers('spot', '1d');
+// wsClient.subscribeSymbolBookTicker(symbol, 'spot');
+// wsClient.subscribePartialBookDepths(symbol, 5, 100, 'spot');
+// wsClient.subscribeDiffBookDepth(symbol, 100, 'spot');
+// wsClient.subscribeContractInfoStream('usdm');
+// wsClient.subscribeContractInfoStream('coinm');
+
+================
+File: examples/WebSockets/Public/ws-usdm-public.ts
+================
+import {
+  DefaultLogger,
+  isWsDiffBookDepthEventFormatted,
+  isWsPartialBookDepthEventFormatted,
+  WebsocketClient,
+  WS_KEY_MAP,
+} from '../../../src';
+⋮----
+// or, with the npm package
+/*
+import {
+  DefaultLogger,
+  isWsDiffBookDepthEventFormatted,
+  isWsPartialBookDepthEventFormatted,
+  WebsocketClient,
+  WS_KEY_MAP,
+} from 'binance';
+*/
+⋮----
+// Without typescript:
+// const logger = {
+⋮----
+// A simple way to suppress heartbeats but receive all other traces
+// if (params[0].includes('ping') || params[0].includes('pong')) {
+//   return;
+// }
+⋮----
+// Optional: when enabled, the SDK will try to format incoming data into more readable objects.
+// Beautified data is emitted via the "formattedMessage" event
+⋮----
+logger, // Optional: customise logging behaviour by extending or overwriting the default logger implementation
+⋮----
+// Raw unprocessed incoming data, e.g. if you have the beautifier disabled
+⋮----
+// console.log('raw message received ', JSON.stringify(data, null, 2));
+⋮----
+// console.log('log rawMessage: ', data);
+⋮----
+// Formatted data that has gone through the beautifier
+⋮----
+// console.log('log formattedMessage: ', data);
+⋮----
+/**
+     * Optional: we've included type-guards for many formatted websocket topics.
+     *
+     * These can be used within `if` blocks to narrow down specific event types (even for non-typescript users).
+     */
+// if (isWsAggTradeFormatted(data)) {
+//   console.log('log agg trade: ', data);
+//   return;
+// }
+⋮----
+// // For one symbol
+// if (isWsFormattedMarkPriceUpdateEvent(data)) {
+//   console.log('log mark price: ', data);
+//   return;
+// }
+⋮----
+// // for many symbols
+// if (isWsFormattedMarkPriceUpdateArray(data)) {
+//   console.log('log mark prices: ', data);
+//   return;
+// }
+⋮----
+// if (isWsFormattedKline(data)) {
+//   console.log('log kline: ', data);
+//   return;
+// }
+⋮----
+// if (isWsFormattedTrade(data)) {
+//   return console.log('log trade: ', data);
+// }
+⋮----
+// if (isWsFormattedForceOrder(data)) {
+//   return console.log('log force order: ', data);
+// }
+⋮----
+// if (isWsFormatted24hrTickerArray(data)) {
+//   return console.log('log 24hr ticker array: ', data);
+// }
+⋮----
+// if (isWsFormattedRollingWindowTickerArray(data)) {
+//   return console.log('log rolling window ticker array: ', data);
+// }
+⋮----
+// if (isWsFormatted24hrTicker(data)) {
+//   return console.log('log 24hr ticker: ', data);
+// }
+⋮----
+// response to command sent via WS stream (e.g LIST_SUBSCRIPTIONS)
+⋮----
+// No action needed here, unless you need to query the REST API after being reconnected.
+⋮----
+/**
+     * The Websocket Client will automatically manage connectivity and active topics/subscriptions for you.
+     *
+     * Simply call wsClient.subscribe(topic, wsKey) as many times as you want, with or without an array.
+     *
+     * The WsKey is a reference to the connection that this topic should be routed to.
+     * WS_KEY_MAP is a complete enum with all the available WsKey values.
+     *
+     * The following topics are routed to the "market" endpoint for USDM Futures market data, as per the following documentation:
+     * https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
+     */
+⋮----
+// Uses the high-frequency order book & core public feeds WS URL dedicated to USDM Futures:
+// wss://fstream.binance.com/public/stream
+⋮----
+/**
+     * Subscribe to each available type of USDM Derivatives market topic, the new way
+     */
+⋮----
+// Individual Symbol Book Ticker Streams
+// https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#individual-symbol-book-ticker-streams
+⋮----
+// All Book Tickers Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Book-Tickers-Stream
+'!bookTicker', // DOESNT EXIST AS TYPE GUARD
+// Partial Book Depth Streams
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Partial-Book-Depth-Streams
+⋮----
+// Diff. Book Depth Stream
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Diff-Book-Depth-Streams
+⋮----
+// /**
+//  *
+//  * For those that used the Node.js Binance SDK before the v3 release, you can
+//  * still subscribe to available market topics the "old" way, for convenience
+//  * when migrating from the old WebsocketClient to the new multiplex client):
+//  *
+//  */
+⋮----
+// wsClient.subscribeAggregateTrades(symbol, 'usdm');
+// wsClient.subscribeTrades(symbol, 'spot');
+// wsClient.subscribeTrades(symbol, 'usdm');
+// wsClient.subscribeTrades(coinMSymbol, 'coinm');
+// wsClient.subscribeCoinIndexPrice(coinMSymbol2);
+// wsClient.subscribeAllBookTickers('usdm');
+// wsClient.subscribeSpotKline(symbol, '1m');
+// wsClient.subscribeMarkPrice(symbol, 'usdm');
+// wsClient.subscribeMarkPrice(coinMSymbol, 'coinm');
+// wsClient.subscribeAllMarketMarkPrice('usdm');
+// wsClient.subscribeAllMarketMarkPrice('coinm');
+// wsClient.subscribeKlines(symbol, '1m', 'usdm');
+// wsClient.subscribeContinuousContractKlines(
+//   symbol,
+//   'perpetual',
+//   '1m',
+//   'usdm',
+// );
+// wsClient.subscribeIndexKlines(coinMSymbol2, '1m');
+// wsClient.subscribeMarkPriceKlines(coinMSymbol, '1m');
+// wsClient.subscribeSymbolMini24hrTicker(symbol, 'spot'); // 0116 265 5309, opt 1
+// wsClient.subscribeSymbolMini24hrTicker(symbol, 'usdm');
+// wsClient.subscribeSymbolMini24hrTicker(coinMSymbol, 'coinm');
+// wsClient.subscribeSymbol24hrTicker(symbol, 'spot');
+// wsClient.subscribeSymbol24hrTicker(symbol, 'usdm');
+// wsClient.subscribeSymbol24hrTicker(coinMSymbol, 'coinm');
+// wsClient.subscribeAllMini24hrTickers('spot');
+// wsClient.subscribeAllMini24hrTickers('usdm');
+// wsClient.subscribeAllMini24hrTickers('coinm');
+// wsClient.subscribeAll24hrTickers('spot');
+// wsClient.subscribeAll24hrTickers('usdm');
+// wsClient.subscribeAll24hrTickers('coinm');
+// wsClient.subscribeSymbolLiquidationOrders(symbol, 'usdm');
+// wsClient.subscribeAllLiquidationOrders('usdm');
+// wsClient.subscribeAllLiquidationOrders('coinm');
+// wsClient.subscribeSpotSymbol24hrTicker(symbol);
+// wsClient.subscribeSpotPartialBookDepth('ETHBTC', 5, 1000);
+// wsClient.subscribeAllRollingWindowTickers('spot', '1d');
+// wsClient.subscribeSymbolBookTicker(symbol, 'spot');
+// wsClient.subscribePartialBookDepths(symbol, 5, 100, 'spot');
+// wsClient.subscribeDiffBookDepth(symbol, 100, 'spot');
+// wsClient.subscribeContractInfoStream('usdm');
+// wsClient.subscribeContractInfoStream('coinm');
+
+================
 File: examples/WebSockets/WS-API/ws-api-client.ts
 ================
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -1925,30 +2319,110 @@ async function main()
 // Start executing the example workflow
 
 ================
+File: examples/WebSockets/README.md
+================
+# Binance WebSocket Streams
+
+This Node.js, JavaScript & TypeScript SDK for Binance has complete support for all available WebSocket capabilities of Binance's API offering.
+
+## Capabilities
+
+These WebSocket capabilities are split into two key groups:
+
+1. WebSocket Consumers:
+   - Subscribe to market data & receive realtime updates.
+   - Subscribe to private account data & receive realtime updates (generally called the user data stream).
+2. WebSocket API:
+   - Send requests & commands over a persistent WebSocket (WSAPI) connection. E.g. Submit an order.
+   - Subscribe to private account data & receive realtime updates (generally called the user data stream), over a persistent WebSocket (WSAPI) connection. Note:
+     - This was previously available without the WebSocket API, via a mechanic involving a temporary listenKey.
+     - In recent updates, the WebSocket API supports subscribing to the user data stream (private updates).
+     - In some cases, this is the only way to subsrcibe to the user data stream (e.g. in Spot markets).
+
+## Architecture
+
+### WebsocketClient
+
+This SDK has all WebSocket capabilities integrated in the dedicated class called the `WebsocketClient`. This can be imported from the package directly. This all-in-one class handles all aspects of Binance's WebSocket capabilities, across all subdomains & endpoints. It also includes the raw capabilities to support integration with the WebSocket API. Subscriptions, heartbeats and connection recovery after disconnect - these are all included automatically.
+
+If the answer to any of these is yes, you should be using the WebsocketClient:
+
+- You want to subscribe to & receive realtime updates for public market data.
+- You want raw control over how & where WebSocket API commands are sent.
+
+If you are looking for a more convenient integration with Binance's WebSocket API, you should look at the `WebsocketAPIClient`.
+
+### WebsocketAPIClient
+
+This is a utility class built over the WebsocketClient to especially provide a more convenient way of using Binance's WebSocket API. While WebSockets are asynchronous by design, the WebsocketAPIClient provides a way to send WebSocket API commands and await the result. All commands are wrapped in a promise and internal event tracking ensures promises are resolved or rejected as part of the command life cycle.
+
+This utility class in this SDK allows you to integrate the WebSocket API in the same way that you would integrate a REST API. Make a request and await the result.
+
+As of early 2026, some of the user data streams are also only available via the WebSocket API streams. This has been integrated into the WebsocketAPIClient and is available with a number of user data methods, depending on the product group. Some references:
+
+- Spot: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.mainWSAPI)`
+- Margin: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.marginUserData)`
+- USDM Futures: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.usdmWSAPI)`
+- CoinM Futures: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.coinmWSAPI)`
+
+## Key Features
+
+### Base URL Split & Migration
+
+On 06/03/2026, Binance announced a routing upgrade to their USDM Futures WebSocket System, titled: "Binance USDⓈ-M Futures WebSocket System Upgrade Notice (2026-03-06)".
+
+#### Key Highlights:
+
+- Introduction of three dedicated WebSocket base URLs:
+  - Public (high-frequency public market data)
+    - wss://fstream.binance.com/public
+  - Market (regular market data)
+    - wss://fstream.binance.com/market
+  - Private (user data streams)
+    - wss://fstream.binance.com/private
+- New endpoints are supported immediately upon this announcement.
+- Legacy WebSocket URLs will be permanently retired on 2026-04-23.
+- Documentation including endpoint & stream mapping: https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
+
+#### Binance JavaScript SDK Support
+
+All three dedicated WebSocket base URLs are supported. Each with their own unique WsKey, used to track each unique connection.
+
+Continue to subscribe to market data as before with the dedicated subscribe method, but ensure to provide the connection key depending on the type of market data you are consuming.
+
+Minimal examples:
+
+```typescript
+// ...
+
+// For public (high-frequency public data)
+const wsKeyUsdmPublic = WS_KEY_MAP.usdmPublic;
+wsClient.subscribe(['btcusdt@bookTicker', 'btcusdt@depth'], wsKeyUsdmPublic);
+
+// For market (regular market data)
+const wsKeyUsdmMarket = WS_KEY_MAP.usdmMarket;
+wsClient.subscribe(['btcusdt@aggTrade', 'btcusdt@forceOrder'], wsKeyUsdmMarket);
+
+// For user data, continue using the subscribe user data stream method as before.
+// The SDK will automatically route to the "private" endpoint for USDM Futures:
+wsClient.subscribeUsdFuturesUserDataStream();
+```
+
+#### Legacy `wsClient.subscribe*()` methods
+
+If you're using any of the per-topic convenience methods, such as `wsClient.subscribeAggregateTrades(...)`, no change is required. The SDK will automatically route the topic subscription request to the appropriate WS URL.
+
+## Further Reading
+
+For detailed examples, refer to the examples in this folder, as well as the following documentation:
+
+- Binance JavaScript SDK QuickStart Guide: https://siebly.io/sdk/binance/javascript
+- Binance JavaScript SDK Readme: https://www.npmjs.com/package/binance
+
+================
 File: src/index.ts
 ================
 
-
-================
-File: .gitignore
-================
-.vscode/
-.idea/
-.nyc_output/
-node_modules/
-util/config.js
-coverage/
-yarn-error.log
-lib/*
-testfile.ts
-privaterepotracker
-restClientRegex.ts
-.DS_Store
-dist
-localtest.ts
-repomix.sh
-doc
-*.pem
 
 ================
 File: .jshintrc
@@ -2369,6 +2843,400 @@ File: tsconfig.linting.json
 }
 
 ================
+File: examples/WebSockets/Private(userdata)/ws-userdata-listenkey.ts
+================
+// or
+// import {
+//   DefaultLogger,
+//   isWsFormattedFuturesUserDataEvent,
+//   isWsFormattedSpotUserDataEvent,
+//   isWsFormattedSpotUserDataExecutionReport,
+//   isWsFormattedUserDataEvent,
+//   WebsocketClient,
+//   WsUserDataEvents,
+// } from 'binance';
+⋮----
+import {
+  DefaultLogger,
+  isWsFormattedFuturesUserDataEvent,
+  isWsFormattedSpotUserDataEvent,
+  isWsFormattedSpotUserDataExecutionReport,
+  isWsFormattedUserDataEvent,
+  WebsocketClient,
+  WsConnectionStateEnum,
+  WsUserDataEvents,
+} from '../../../src/index';
+⋮----
+// Optional, hook and customise logging behavior
+⋮----
+// testnet: true,
+⋮----
+// wsClient.on('message', (data) => {
+//   console.log('raw message received ', JSON.stringify(data, null, 2));
+// });
+⋮----
+function onUserDataEvent(data: WsUserDataEvents)
+⋮----
+// the market denotes which API category it came from
+// if (data.wsMarket.includes('spot')) {
+⋮----
+// or use a type guard, if one exists (PRs welcome)
+⋮----
+// The wsKey can be parsed to determine the type of message (what websocket it came from)
+// if (!Array.isArray(data) && data.wsKey.includes('userData')) {
+//   return onUserDataEvent(data);
+// }
+⋮----
+// or use a type guard if available
+⋮----
+// response to command sent via WS stream (e.g LIST_SUBSCRIPTIONS)
+⋮----
+// This is a good place to check your own state is still in sync with the account state on the exchange, in case any events were missed while the library was reconnecting:
+// - fetch balances
+// - fetch positions
+// - fetch orders
+⋮----
+/**
+   * This example demonstrates subscribing to the user data stream via the
+   * listen key workflow.
+   *
+   * Note: the listen key workflow is deprecated for "spot" markets. Use the
+   * WebSocket API `userDataStream.subscribe` workflow instead (only available
+   * in spot right now). See `subscribeUserDataStream()` in the WebsocketAPIClient.
+   *
+   * Each method below opens a dedicated WS connection attached to an automatically
+   * fetched listen key (a session for your user data stream).
+   *
+   * Once subscribed, you don't need to do anything else. Listen-key keep-alive, refresh, reconnects, etc are all automatically handled by the SDK.
+   */
+⋮----
+/**
+   * Note: for spot markets, the listen key workflow is deprecated. Use the
+   * WebSocket API `userDataStream.subscribe` workflow instead (only available
+   * in spot right now). See `subscribeUserDataStream()` in the WebsocketAPIClient.
+   */
+// Deprecated, see above: wsClient.subscribeSpotUserDataStream();
+// Deprecated, see above: wsClient.subscribeSpotUserDataStream('main2');
+// Deprecated, see above: wsClient.subscribeCrossMarginUserDataStream();
+// Deprecated, see above: wsClient.subscribeIsolatedMarginUserDataStream('BTCUSDC');
+⋮----
+/**
+   * Futures
+   */
+⋮----
+// Example 5: usdm futures
+⋮----
+// Example 6: coinm futures
+⋮----
+// Example 7: portfolio margin
+⋮----
+// Example 8: portfolio margin pro
+⋮----
+// after 15 seconds, kill user data connections one by one (or all at once)
+⋮----
+// console.log('killing all connections at once');
+// wsClient.closeAll();
+⋮----
+// or:
+⋮----
+// console.log('killing all connections');
+// wsClient.closeAll();
+// Example 5: usdm futures
+⋮----
+// Example 6: coinm futures
+⋮----
+// // Example 7: portfolio margin
+// wsClient.unsubscribePortfolioMarginUserDataStream();
+// // Example 8: portfolio margin pro
+// wsClient.unsubscribePortfolioMarginUserDataStream(
+//   'portfolioMarginProUserData',
+// );
+⋮----
+// after 20 seconds, list the remaining open connections
+
+================
+File: src/types/websockets/ws-general.ts
+================
+import { AxiosRequestConfig } from 'axios';
+import type { ClientRequestArgs } from 'http';
+import WebSocket from 'isomorphic-ws';
+⋮----
+import { RestClientOptions } from '../../util/requestUtils';
+import { WsKey } from '../../util/websockets/websocket-util';
+⋮----
+export interface MessageEventLike {
+  target: WebSocket;
+  type: 'message';
+  data: string;
+}
+⋮----
+export function isMessageEvent(msg: unknown): msg is MessageEventLike
+⋮----
+export type WsMarket =
+  | 'spot'
+  | 'spotTestnet'
+  | 'crossMargin'
+  | 'isolatedMargin'
+  | 'riskDataMargin'
+  | 'usdm'
+  | 'usdmTestnet'
+  | 'coinm'
+  | 'coinmTestnet'
+  | 'options'
+  | 'optionsTestnet'
+  | 'portfoliom'
+  | 'alpha';
+⋮----
+export interface WsSharedBase {
+  wsMarket: WsMarket;
+  wsKey: WsKey;
+  streamName: string;
+}
+⋮----
+export interface WsResponse {
+  type: 'message';
+  data: {
+    result: boolean | string[] | null;
+    id: number;
+    isWSAPIResponse: boolean;
+    wsKey: WsKey;
+  };
+}
+⋮----
+// Same as inverse futures
+export type WsPublicInverseTopic =
+  | 'orderBookL2_25'
+  | 'orderBookL2_200'
+  | 'trade'
+  | 'insurance'
+  | 'instrument_info'
+  | 'klineV2';
+⋮----
+export type WsPublicUSDTPerpTopic =
+  | 'orderBookL2_25'
+  | 'orderBookL2_200'
+  | 'trade'
+  | 'insurance'
+  | 'instrument_info'
+  | 'kline';
+⋮----
+export type WsPublicSpotV1Topic =
+  | 'trade'
+  | 'realtimes'
+  | 'kline'
+  | 'mergedDepth'
+  | 'diffDepth';
+⋮----
+export type WsPublicSpotV2Topic = 'depth' | 'kline' | 'trade' | 'realtimes';
+⋮----
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
+export type WsPublicUSDMTopic = 'bookTicker' | 'depth';
+⋮----
+// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#market-regular-market-data
+export type WsMarketUSDMTopic =
+  | 'aggTrade'
+  | 'markPrice'
+  | 'kline'
+  | 'continuousKline'
+  | 'miniTicker'
+  | 'ticker'
+  | 'forceOrder'
+  | 'compositeIndex'
+  | 'contractInfo'
+  | 'assetIndex';
+⋮----
+export type WsPublicTopics =
+  | WsPublicInverseTopic
+  | WsPublicUSDTPerpTopic
+  | WsPublicSpotV1Topic
+  | WsPublicSpotV2Topic
+  | WsMarketUSDMTopic
+  | WsPublicUSDMTopic
+  | string;
+⋮----
+// Same as inverse futures
+export type WsPrivateInverseTopic =
+  | 'position'
+  | 'execution'
+  | 'order'
+  | 'stop_order';
+⋮----
+export type WsPrivateUSDTPerpTopic =
+  | 'position'
+  | 'execution'
+  | 'order'
+  | 'stop_order'
+  | 'wallet';
+⋮----
+export type WsPrivateSpotTopic =
+  | 'outboundAccountInfo'
+  | 'executionReport'
+  | 'ticketInfo';
+⋮----
+export type WsPrivateTopic =
+  | WsPrivateInverseTopic
+  | WsPrivateUSDTPerpTopic
+  | WsPrivateSpotTopic
+  | string;
+⋮----
+export type WsTopic = WsPublicTopics | WsPrivateTopic;
+⋮----
+export interface WSClientConfigurableOptions {
+  /** Your API key */
+  api_key?: string;
+
+  /** Your API secret */
+  api_secret?: string;
+
+  beautify?: boolean;
+
+  /**
+   * If true, log a warning if the beautifier is missing anything for an event
+   */
+  beautifyWarnIfMissing?: boolean;
+
+  /**
+   * Set to `true` to connect to Binance's testnet environment.
+   *
+   * Notes:
+   * - Not all WebSocket categories support testnet.
+   * - If testing a strategy, this is not recommended. Testnet market data is very different from real market conditions. More guidance here: https://github.com/tiagosiebler/awesome-crypto-examples/wiki/CEX-Testnets
+   */
+  testnet?: boolean;
+
+  /**
+   * Set to `true` to use Binance's demo trading WebSocket endpoints.
+   * Demo trading uses real market data but simulated trading.
+   * More info: https://demo.binance.com/
+   *
+   * Notes:
+   * - If demo trading, `testnet` should be set to false!
+   * - If testing a strategy, use demo trading instead. Testnet market data is very different from real market conditions.
+   */
+  demoTrading?: boolean;
+
+  /**
+   * Default: false. If true, use market maker endpoints when available.
+   * Eligible for high-frequency trading users who have enrolled and qualified
+   * in at least one of the Futures Liquidity Provider Programs.
+   * More info: https://www.binance.com/en/support/faq/detail/7df7f3838c3b49e692d175374c3a3283
+   */
+  useMMSubdomain?: boolean;
+
+  /** Define a recv window when preparing a private websocket signature. This is in milliseconds, so 5000 == 5 seconds */
+  recvWindow?: number;
+
+  // Disable ping/pong ws heartbeat mechanism (not recommended)
+  disableHeartbeat?: boolean;
+
+  /** How often to check if the connection is alive */
+  pingInterval?: number;
+
+  /** How long to wait for a pong (heartbeat reply) before assuming the connection is dead */
+  pongTimeout?: number;
+
+  /** Delay in milliseconds before respawning the connection */
+  reconnectTimeout?: number;
+
+  restOptions?: RestClientOptions;
+
+  requestOptions?: AxiosRequestConfig;
+
+  wsOptions?: {
+    protocols?: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    agent?: any;
+  } & (
+    | Omit<Partial<WebSocket.ClientOptions>, 'agent'>
+    | Omit<Partial<ClientRequestArgs>, 'agent'>
+  );
+
+  wsUrl?: string;
+
+  /**
+   * Allows you to provide a custom "signMessage" function, e.g. to use node's much faster createHmac method
+   *
+   * Look in the examples folder for a demonstration on using node's createHmac instead.
+   */
+  customSignMessageFn?: (message: string, secret: string) => Promise<string>;
+
+  /**
+   * Optional custom JSON parser used for incoming WS messages.
+   * Defaults to JSON.parse.
+   */
+  customParseJSONFn?: (raw: string) => object;
+}
+⋮----
+/** Your API key */
+⋮----
+/** Your API secret */
+⋮----
+/**
+   * If true, log a warning if the beautifier is missing anything for an event
+   */
+⋮----
+/**
+   * Set to `true` to connect to Binance's testnet environment.
+   *
+   * Notes:
+   * - Not all WebSocket categories support testnet.
+   * - If testing a strategy, this is not recommended. Testnet market data is very different from real market conditions. More guidance here: https://github.com/tiagosiebler/awesome-crypto-examples/wiki/CEX-Testnets
+   */
+⋮----
+/**
+   * Set to `true` to use Binance's demo trading WebSocket endpoints.
+   * Demo trading uses real market data but simulated trading.
+   * More info: https://demo.binance.com/
+   *
+   * Notes:
+   * - If demo trading, `testnet` should be set to false!
+   * - If testing a strategy, use demo trading instead. Testnet market data is very different from real market conditions.
+   */
+⋮----
+/**
+   * Default: false. If true, use market maker endpoints when available.
+   * Eligible for high-frequency trading users who have enrolled and qualified
+   * in at least one of the Futures Liquidity Provider Programs.
+   * More info: https://www.binance.com/en/support/faq/detail/7df7f3838c3b49e692d175374c3a3283
+   */
+⋮----
+/** Define a recv window when preparing a private websocket signature. This is in milliseconds, so 5000 == 5 seconds */
+⋮----
+// Disable ping/pong ws heartbeat mechanism (not recommended)
+⋮----
+/** How often to check if the connection is alive */
+⋮----
+/** How long to wait for a pong (heartbeat reply) before assuming the connection is dead */
+⋮----
+/** Delay in milliseconds before respawning the connection */
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+⋮----
+/**
+   * Allows you to provide a custom "signMessage" function, e.g. to use node's much faster createHmac method
+   *
+   * Look in the examples folder for a demonstration on using node's createHmac instead.
+   */
+⋮----
+/**
+   * Optional custom JSON parser used for incoming WS messages.
+   * Defaults to JSON.parse.
+   */
+⋮----
+/**
+ * WS configuration that's always defined, regardless of user configuration
+ * (usually comes from defaults if there's no user-provided values)
+ */
+export interface WebsocketClientOptions extends WSClientConfigurableOptions {
+  pongTimeout: number;
+  pingInterval: number;
+  reconnectTimeout: number;
+  recvWindow: number;
+  authPrivateConnectionsOnConnect: boolean;
+  authPrivateRequestsIndividually: boolean;
+}
+
+================
 File: src/types/coin.ts
 ================
 import { FuturesContractType, PositionSide } from './futures';
@@ -2511,6 +3379,28 @@ function generateConfig(name)
 // All output '.js' files will have any sourcemaps re-processed by 'source-map-loader'.
 
 ================
+File: .gitignore
+================
+.vscode/
+.idea/
+.nyc_output/
+node_modules/
+util/config.js
+coverage/
+yarn-error.log
+lib/*
+testfile.ts
+privaterepotracker
+restClientRegex.ts
+.DS_Store
+dist
+localtest.ts
+repomix.sh
+doc
+*.pem
+.env
+
+================
 File: .npmrc
 ================
 min-release-age=30
@@ -2527,613 +3417,6 @@ import { FuturesNewAlgoOrderParams, USDMClient } from '../../../src/index';
 async function start()
 ⋮----
 // Hedge Mode example: find each open hedge position and replace its SL.
-
-================
-File: examples/WebSockets/Private(userdata)/ws-userdata-listenkey.ts
-================
-// or
-// import {
-//   DefaultLogger,
-//   isWsFormattedFuturesUserDataEvent,
-//   isWsFormattedSpotUserDataEvent,
-//   isWsFormattedSpotUserDataExecutionReport,
-//   isWsFormattedUserDataEvent,
-//   WebsocketClient,
-//   WsUserDataEvents,
-// } from 'binance';
-⋮----
-import {
-  DefaultLogger,
-  isWsFormattedFuturesUserDataEvent,
-  isWsFormattedSpotUserDataEvent,
-  isWsFormattedSpotUserDataExecutionReport,
-  isWsFormattedUserDataEvent,
-  WebsocketClient,
-  WsConnectionStateEnum,
-  WsUserDataEvents,
-} from '../../../src/index';
-⋮----
-// Optional, hook and customise logging behavior
-⋮----
-// testnet: true,
-⋮----
-// wsClient.on('message', (data) => {
-//   console.log('raw message received ', JSON.stringify(data, null, 2));
-// });
-⋮----
-function onUserDataEvent(data: WsUserDataEvents)
-⋮----
-// the market denotes which API category it came from
-// if (data.wsMarket.includes('spot')) {
-⋮----
-// or use a type guard, if one exists (PRs welcome)
-⋮----
-// The wsKey can be parsed to determine the type of message (what websocket it came from)
-// if (!Array.isArray(data) && data.wsKey.includes('userData')) {
-//   return onUserDataEvent(data);
-// }
-⋮----
-// or use a type guard if available
-⋮----
-// response to command sent via WS stream (e.g LIST_SUBSCRIPTIONS)
-⋮----
-// This is a good place to check your own state is still in sync with the account state on the exchange, in case any events were missed while the library was reconnecting:
-// - fetch balances
-// - fetch positions
-// - fetch orders
-⋮----
-/**
-   * This example demonstrates subscribing to the user data stream via the
-   * listen key workflow.
-   *
-   * Note: the listen key workflow is deprecated for "spot" markets. Use the
-   * WebSocket API `userDataStream.subscribe` workflow instead (only available
-   * in spot right now). See `subscribeUserDataStream()` in the WebsocketAPIClient.
-   *
-   * Each method below opens a dedicated WS connection attached to an automatically
-   * fetched listen key (a session for your user data stream).
-   *
-   * Once subscribed, you don't need to do anything else. Listen-key keep-alive, refresh, reconnects, etc are all automatically handled by the SDK.
-   */
-⋮----
-/**
-   * Note: for spot markets, the listen key workflow is deprecated. Use the
-   * WebSocket API `userDataStream.subscribe` workflow instead (only available
-   * in spot right now). See `subscribeUserDataStream()` in the WebsocketAPIClient.
-   */
-// Deprecated, see above: wsClient.subscribeSpotUserDataStream();
-// Deprecated, see above: wsClient.subscribeSpotUserDataStream('main2');
-// Deprecated, see above: wsClient.subscribeCrossMarginUserDataStream();
-// Deprecated, see above: wsClient.subscribeIsolatedMarginUserDataStream('BTCUSDC');
-⋮----
-/**
-   * Futures
-   */
-⋮----
-// Example 5: usdm futures
-⋮----
-// Example 6: coinm futures
-⋮----
-// Example 7: portfolio margin
-⋮----
-// Example 8: portfolio margin pro
-⋮----
-// after 15 seconds, kill user data connections one by one (or all at once)
-⋮----
-// console.log('killing all connections at once');
-// wsClient.closeAll();
-⋮----
-// or:
-⋮----
-// console.log('killing all connections');
-// wsClient.closeAll();
-// Example 5: usdm futures
-⋮----
-// Example 6: coinm futures
-⋮----
-// // Example 7: portfolio margin
-// wsClient.unsubscribePortfolioMarginUserDataStream();
-// // Example 8: portfolio margin pro
-// wsClient.unsubscribePortfolioMarginUserDataStream(
-//   'portfolioMarginProUserData',
-// );
-⋮----
-// after 20 seconds, list the remaining open connections
-
-================
-File: examples/WebSockets/Public/ws-usdm-market.ts
-================
-import {
-  DefaultLogger,
-  isWsDiffBookDepthEventFormatted,
-  isWsPartialBookDepthEventFormatted,
-  WebsocketClient,
-  WS_KEY_MAP,
-} from '../../../src';
-⋮----
-// or, with the npm package
-/*
-import {
-  DefaultLogger,
-  isWsDiffBookDepthEventFormatted,
-  isWsPartialBookDepthEventFormatted,
-  WebsocketClient,
-  WS_KEY_MAP,
-} from 'binance';
-*/
-⋮----
-// Without typescript:
-// const logger = {
-⋮----
-// A simple way to suppress heartbeats but receive all other traces
-// if (params[0].includes('ping') || params[0].includes('pong')) {
-//   return;
-// }
-⋮----
-// Optional: when enabled, the SDK will try to format incoming data into more readable objects.
-// Beautified data is emitted via the "formattedMessage" event
-⋮----
-logger, // Optional: customise logging behaviour by extending or overwriting the default logger implementation
-⋮----
-// Raw unprocessed incoming data, e.g. if you have the beautifier disabled
-⋮----
-// console.log('raw message received ', JSON.stringify(data, null, 2));
-⋮----
-// console.log('log rawMessage: ', data);
-⋮----
-// Formatted data that has gone through the beautifier
-⋮----
-// console.log('log formattedMessage: ', data);
-⋮----
-/**
-     * Optional: we've included type-guards for many formatted websocket topics.
-     *
-     * These can be used within `if` blocks to narrow down specific event types (even for non-typescript users).
-     */
-// if (isWsAggTradeFormatted(data)) {
-//   console.log('log agg trade: ', data);
-//   return;
-// }
-⋮----
-// // For one symbol
-// if (isWsFormattedMarkPriceUpdateEvent(data)) {
-//   console.log('log mark price: ', data);
-//   return;
-// }
-⋮----
-// // for many symbols
-// if (isWsFormattedMarkPriceUpdateArray(data)) {
-//   console.log('log mark prices: ', data);
-//   return;
-// }
-⋮----
-// if (isWsFormattedKline(data)) {
-//   console.log('log kline: ', data);
-//   return;
-// }
-⋮----
-// if (isWsFormattedTrade(data)) {
-//   return console.log('log trade: ', data);
-// }
-⋮----
-// if (isWsFormattedForceOrder(data)) {
-//   return console.log('log force order: ', data);
-// }
-⋮----
-// if (isWsFormatted24hrTickerArray(data)) {
-//   return console.log('log 24hr ticker array: ', data);
-// }
-⋮----
-// if (isWsFormattedRollingWindowTickerArray(data)) {
-//   return console.log('log rolling window ticker array: ', data);
-// }
-⋮----
-// if (isWsFormatted24hrTicker(data)) {
-//   return console.log('log 24hr ticker: ', data);
-// }
-⋮----
-// response to command sent via WS stream (e.g LIST_SUBSCRIPTIONS)
-⋮----
-// No action needed here, unless you need to query the REST API after being reconnected.
-⋮----
-/**
-     * The Websocket Client will automatically manage connectivity and active topics/subscriptions for you.
-     *
-     * Simply call wsClient.subscribe(topic, wsKey) as many times as you want, with or without an array.
-     *
-     * The WsKey is a reference to the connection that this topic should be routed to.
-     * WS_KEY_MAP is a complete enum with all the available WsKey values.
-     *
-     * The following topics are routed to the "market" endpoint for USDM Futures market data, as per the following documentation:
-     * https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
-     */
-⋮----
-// Uses the regular market feeds WS URL dedicated to USDM Futures: wss://fstream.binance.com/market/stream
-⋮----
-/**
-     * Subscribe to each available type of USDM Derivatives market topic, the new way
-     */
-⋮----
-// Aggregate Trade Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Aggregate-Trade-Streams
-⋮----
-// Mark Price Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Mark-Price-Stream
-⋮----
-// Mark Price Stream for All market
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Mark-Price-Stream-for-All-market
-⋮----
-// Kline/Candlestick Streams
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Kline-Candlestick-Streams
-⋮----
-// Continuous Contract Kline/Candlestick Streams
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Continuous-Contract-Kline-Candlestick-Streams
-'btcusdt_perpetual@continuousKline_1m', // DOESNT EXIST AS TYPE GUARD, ONLY IN BEAUTIFIER
-⋮----
-// Individual Symbol Mini Ticker Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Individual-Symbol-Mini-Ticker-Stream
-'btcusdt@miniTicker', // DOESNT EXIST AS TYPE GUARD, ONLY FOR RAW MESSAGE
-⋮----
-// All Market Mini Tickers Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Market-Mini-Tickers-Stream
-'!miniTicker@arr', // DOESNT EXIST AS TYPE GUARD
-⋮----
-// Individual Symbol Ticker Streams
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Individual-Symbol-Ticker-Streams
-⋮----
-// All Market Tickers Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Market-Tickers-Stream
-'!ticker@arr', // DOESNT EXIST AS TYPE GUARD
-⋮----
-// Liquidation Order Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Liquidation-Order-Streams
-⋮----
-// Liquidation Order Stream for All market
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Market-Liquidation-Order-Streams
-⋮----
-// Composite Index Symbol Information Streams
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Composite-Index-Symbol-Information-Streams
-⋮----
-'btcusdt@compositeIndex', // DOESNT EXIST AS TYPE GUARD
-// Contract Info Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Contract-Info-Stream
-'!contractInfo', // DOESNT EXIST AS TYPE GUARD
-⋮----
-// Multi-Assets Mode Asset Index Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Multi-Assets-Mode-Asset-Index
-'!assetIndex@arr', // DOESNT EXIST AS TYPE GUARD
-⋮----
-// /**
-//  *
-//  * For those that used the Node.js Binance SDK before the v3 release, you can
-//  * still subscribe to available market topics the "old" way, for convenience
-//  * when migrating from the old WebsocketClient to the new multiplex client):
-//  *
-//  */
-⋮----
-// wsClient.subscribeAggregateTrades(symbol, 'usdm');
-// wsClient.subscribeTrades(symbol, 'spot');
-// wsClient.subscribeTrades(symbol, 'usdm');
-// wsClient.subscribeTrades(coinMSymbol, 'coinm');
-// wsClient.subscribeCoinIndexPrice(coinMSymbol2);
-// wsClient.subscribeAllBookTickers('usdm');
-// wsClient.subscribeSpotKline(symbol, '1m');
-// wsClient.subscribeMarkPrice(symbol, 'usdm');
-// wsClient.subscribeMarkPrice(coinMSymbol, 'coinm');
-// wsClient.subscribeAllMarketMarkPrice('usdm');
-// wsClient.subscribeAllMarketMarkPrice('coinm');
-// wsClient.subscribeKlines(symbol, '1m', 'usdm');
-// wsClient.subscribeContinuousContractKlines(
-//   symbol,
-//   'perpetual',
-//   '1m',
-//   'usdm',
-// );
-// wsClient.subscribeIndexKlines(coinMSymbol2, '1m');
-// wsClient.subscribeMarkPriceKlines(coinMSymbol, '1m');
-// wsClient.subscribeSymbolMini24hrTicker(symbol, 'spot'); // 0116 265 5309, opt 1
-// wsClient.subscribeSymbolMini24hrTicker(symbol, 'usdm');
-// wsClient.subscribeSymbolMini24hrTicker(coinMSymbol, 'coinm');
-// wsClient.subscribeSymbol24hrTicker(symbol, 'spot');
-// wsClient.subscribeSymbol24hrTicker(symbol, 'usdm');
-// wsClient.subscribeSymbol24hrTicker(coinMSymbol, 'coinm');
-// wsClient.subscribeAllMini24hrTickers('spot');
-// wsClient.subscribeAllMini24hrTickers('usdm');
-// wsClient.subscribeAllMini24hrTickers('coinm');
-// wsClient.subscribeAll24hrTickers('spot');
-// wsClient.subscribeAll24hrTickers('usdm');
-// wsClient.subscribeAll24hrTickers('coinm');
-// wsClient.subscribeSymbolLiquidationOrders(symbol, 'usdm');
-// wsClient.subscribeAllLiquidationOrders('usdm');
-// wsClient.subscribeAllLiquidationOrders('coinm');
-// wsClient.subscribeSpotSymbol24hrTicker(symbol);
-// wsClient.subscribeSpotPartialBookDepth('ETHBTC', 5, 1000);
-// wsClient.subscribeAllRollingWindowTickers('spot', '1d');
-// wsClient.subscribeSymbolBookTicker(symbol, 'spot');
-// wsClient.subscribePartialBookDepths(symbol, 5, 100, 'spot');
-// wsClient.subscribeDiffBookDepth(symbol, 100, 'spot');
-// wsClient.subscribeContractInfoStream('usdm');
-// wsClient.subscribeContractInfoStream('coinm');
-
-================
-File: examples/WebSockets/Public/ws-usdm-public.ts
-================
-import {
-  DefaultLogger,
-  isWsDiffBookDepthEventFormatted,
-  isWsPartialBookDepthEventFormatted,
-  WebsocketClient,
-  WS_KEY_MAP,
-} from '../../../src';
-⋮----
-// or, with the npm package
-/*
-import {
-  DefaultLogger,
-  isWsDiffBookDepthEventFormatted,
-  isWsPartialBookDepthEventFormatted,
-  WebsocketClient,
-  WS_KEY_MAP,
-} from 'binance';
-*/
-⋮----
-// Without typescript:
-// const logger = {
-⋮----
-// A simple way to suppress heartbeats but receive all other traces
-// if (params[0].includes('ping') || params[0].includes('pong')) {
-//   return;
-// }
-⋮----
-// Optional: when enabled, the SDK will try to format incoming data into more readable objects.
-// Beautified data is emitted via the "formattedMessage" event
-⋮----
-logger, // Optional: customise logging behaviour by extending or overwriting the default logger implementation
-⋮----
-// Raw unprocessed incoming data, e.g. if you have the beautifier disabled
-⋮----
-// console.log('raw message received ', JSON.stringify(data, null, 2));
-⋮----
-// console.log('log rawMessage: ', data);
-⋮----
-// Formatted data that has gone through the beautifier
-⋮----
-// console.log('log formattedMessage: ', data);
-⋮----
-/**
-     * Optional: we've included type-guards for many formatted websocket topics.
-     *
-     * These can be used within `if` blocks to narrow down specific event types (even for non-typescript users).
-     */
-// if (isWsAggTradeFormatted(data)) {
-//   console.log('log agg trade: ', data);
-//   return;
-// }
-⋮----
-// // For one symbol
-// if (isWsFormattedMarkPriceUpdateEvent(data)) {
-//   console.log('log mark price: ', data);
-//   return;
-// }
-⋮----
-// // for many symbols
-// if (isWsFormattedMarkPriceUpdateArray(data)) {
-//   console.log('log mark prices: ', data);
-//   return;
-// }
-⋮----
-// if (isWsFormattedKline(data)) {
-//   console.log('log kline: ', data);
-//   return;
-// }
-⋮----
-// if (isWsFormattedTrade(data)) {
-//   return console.log('log trade: ', data);
-// }
-⋮----
-// if (isWsFormattedForceOrder(data)) {
-//   return console.log('log force order: ', data);
-// }
-⋮----
-// if (isWsFormatted24hrTickerArray(data)) {
-//   return console.log('log 24hr ticker array: ', data);
-// }
-⋮----
-// if (isWsFormattedRollingWindowTickerArray(data)) {
-//   return console.log('log rolling window ticker array: ', data);
-// }
-⋮----
-// if (isWsFormatted24hrTicker(data)) {
-//   return console.log('log 24hr ticker: ', data);
-// }
-⋮----
-// response to command sent via WS stream (e.g LIST_SUBSCRIPTIONS)
-⋮----
-// No action needed here, unless you need to query the REST API after being reconnected.
-⋮----
-/**
-     * The Websocket Client will automatically manage connectivity and active topics/subscriptions for you.
-     *
-     * Simply call wsClient.subscribe(topic, wsKey) as many times as you want, with or without an array.
-     *
-     * The WsKey is a reference to the connection that this topic should be routed to.
-     * WS_KEY_MAP is a complete enum with all the available WsKey values.
-     *
-     * The following topics are routed to the "market" endpoint for USDM Futures market data, as per the following documentation:
-     * https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
-     */
-⋮----
-// Uses the high-frequency order book & core public feeds WS URL dedicated to USDM Futures:
-// wss://fstream.binance.com/public/stream
-⋮----
-/**
-     * Subscribe to each available type of USDM Derivatives market topic, the new way
-     */
-⋮----
-// Individual Symbol Book Ticker Streams
-// https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#individual-symbol-book-ticker-streams
-⋮----
-// All Book Tickers Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/All-Book-Tickers-Stream
-'!bookTicker', // DOESNT EXIST AS TYPE GUARD
-// Partial Book Depth Streams
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Partial-Book-Depth-Streams
-⋮----
-// Diff. Book Depth Stream
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Diff-Book-Depth-Streams
-⋮----
-// /**
-//  *
-//  * For those that used the Node.js Binance SDK before the v3 release, you can
-//  * still subscribe to available market topics the "old" way, for convenience
-//  * when migrating from the old WebsocketClient to the new multiplex client):
-//  *
-//  */
-⋮----
-// wsClient.subscribeAggregateTrades(symbol, 'usdm');
-// wsClient.subscribeTrades(symbol, 'spot');
-// wsClient.subscribeTrades(symbol, 'usdm');
-// wsClient.subscribeTrades(coinMSymbol, 'coinm');
-// wsClient.subscribeCoinIndexPrice(coinMSymbol2);
-// wsClient.subscribeAllBookTickers('usdm');
-// wsClient.subscribeSpotKline(symbol, '1m');
-// wsClient.subscribeMarkPrice(symbol, 'usdm');
-// wsClient.subscribeMarkPrice(coinMSymbol, 'coinm');
-// wsClient.subscribeAllMarketMarkPrice('usdm');
-// wsClient.subscribeAllMarketMarkPrice('coinm');
-// wsClient.subscribeKlines(symbol, '1m', 'usdm');
-// wsClient.subscribeContinuousContractKlines(
-//   symbol,
-//   'perpetual',
-//   '1m',
-//   'usdm',
-// );
-// wsClient.subscribeIndexKlines(coinMSymbol2, '1m');
-// wsClient.subscribeMarkPriceKlines(coinMSymbol, '1m');
-// wsClient.subscribeSymbolMini24hrTicker(symbol, 'spot'); // 0116 265 5309, opt 1
-// wsClient.subscribeSymbolMini24hrTicker(symbol, 'usdm');
-// wsClient.subscribeSymbolMini24hrTicker(coinMSymbol, 'coinm');
-// wsClient.subscribeSymbol24hrTicker(symbol, 'spot');
-// wsClient.subscribeSymbol24hrTicker(symbol, 'usdm');
-// wsClient.subscribeSymbol24hrTicker(coinMSymbol, 'coinm');
-// wsClient.subscribeAllMini24hrTickers('spot');
-// wsClient.subscribeAllMini24hrTickers('usdm');
-// wsClient.subscribeAllMini24hrTickers('coinm');
-// wsClient.subscribeAll24hrTickers('spot');
-// wsClient.subscribeAll24hrTickers('usdm');
-// wsClient.subscribeAll24hrTickers('coinm');
-// wsClient.subscribeSymbolLiquidationOrders(symbol, 'usdm');
-// wsClient.subscribeAllLiquidationOrders('usdm');
-// wsClient.subscribeAllLiquidationOrders('coinm');
-// wsClient.subscribeSpotSymbol24hrTicker(symbol);
-// wsClient.subscribeSpotPartialBookDepth('ETHBTC', 5, 1000);
-// wsClient.subscribeAllRollingWindowTickers('spot', '1d');
-// wsClient.subscribeSymbolBookTicker(symbol, 'spot');
-// wsClient.subscribePartialBookDepths(symbol, 5, 100, 'spot');
-// wsClient.subscribeDiffBookDepth(symbol, 100, 'spot');
-// wsClient.subscribeContractInfoStream('usdm');
-// wsClient.subscribeContractInfoStream('coinm');
-
-================
-File: examples/WebSockets/README.md
-================
-# Binance WebSocket Streams
-
-This Node.js, JavaScript & TypeScript SDK for Binance has complete support for all available WebSocket capabilities of Binance's API offering.
-
-## Capabilities
-
-These WebSocket capabilities are split into two key groups:
-
-1. WebSocket Consumers:
-   - Subscribe to market data & receive realtime updates.
-   - Subscribe to private account data & receive realtime updates (generally called the user data stream).
-2. WebSocket API:
-   - Send requests & commands over a persistent WebSocket (WSAPI) connection. E.g. Submit an order.
-   - Subscribe to private account data & receive realtime updates (generally called the user data stream), over a persistent WebSocket (WSAPI) connection. Note:
-     - This was previously available without the WebSocket API, via a mechanic involving a temporary listenKey.
-     - In recent updates, the WebSocket API supports subscribing to the user data stream (private updates).
-     - In some cases, this is the only way to subsrcibe to the user data stream (e.g. in Spot markets).
-
-## Architecture
-
-### WebsocketClient
-
-This SDK has all WebSocket capabilities integrated in the dedicated class called the `WebsocketClient`. This can be imported from the package directly. This all-in-one class handles all aspects of Binance's WebSocket capabilities, across all subdomains & endpoints. It also includes the raw capabilities to support integration with the WebSocket API. Subscriptions, heartbeats and connection recovery after disconnect - these are all included automatically.
-
-If the answer to any of these is yes, you should be using the WebsocketClient:
-
-- You want to subscribe to & receive realtime updates for public market data.
-- You want raw control over how & where WebSocket API commands are sent.
-
-If you are looking for a more convenient integration with Binance's WebSocket API, you should look at the `WebsocketAPIClient`.
-
-### WebsocketAPIClient
-
-This is a utility class built over the WebsocketClient to especially provide a more convenient way of using Binance's WebSocket API. While WebSockets are asynchronous by design, the WebsocketAPIClient provides a way to send WebSocket API commands and await the result. All commands are wrapped in a promise and internal event tracking ensures promises are resolved or rejected as part of the command life cycle.
-
-This utility class in this SDK allows you to integrate the WebSocket API in the same way that you would integrate a REST API. Make a request and await the result.
-
-As of early 2026, some of the user data streams are also only available via the WebSocket API streams. This has been integrated into the WebsocketAPIClient and is available with a number of user data methods, depending on the product group. Some references:
-
-- Spot: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.mainWSAPI)`
-- Margin: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.marginUserData)`
-- USDM Futures: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.usdmWSAPI)`
-- CoinM Futures: `wsApiClient.subscribeUserDataStream(WS_KEY_MAP.coinmWSAPI)`
-
-## Key Features
-
-### Base URL Split & Migration
-
-On 06/03/2026, Binance announced a routing upgrade to their USDM Futures WebSocket System, titled: "Binance USDⓈ-M Futures WebSocket System Upgrade Notice (2026-03-06)".
-
-#### Key Highlights:
-
-- Introduction of three dedicated WebSocket base URLs:
-  - Public (high-frequency public market data)
-    - wss://fstream.binance.com/public
-  - Market (regular market data)
-    - wss://fstream.binance.com/market
-  - Private (user data streams)
-    - wss://fstream.binance.com/private
-- New endpoints are supported immediately upon this announcement.
-- Legacy WebSocket URLs will be permanently retired on 2026-04-23.
-- Documentation including endpoint & stream mapping: https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
-
-#### Binance JavaScript SDK Support
-
-All three dedicated WebSocket base URLs are supported. Each with their own unique WsKey, used to track each unique connection.
-
-Continue to subscribe to market data as before with the dedicated subscribe method, but ensure to provide the connection key depending on the type of market data you are consuming.
-
-Minimal examples:
-
-```typescript
-// ...
-
-// For public (high-frequency public data)
-const wsKeyUsdmPublic = WS_KEY_MAP.usdmPublic;
-wsClient.subscribe(['btcusdt@bookTicker', 'btcusdt@depth'], wsKeyUsdmPublic);
-
-// For market (regular market data)
-const wsKeyUsdmMarket = WS_KEY_MAP.usdmMarket;
-wsClient.subscribe(['btcusdt@aggTrade', 'btcusdt@forceOrder'], wsKeyUsdmMarket);
-
-// For user data, continue using the subscribe user data stream method as before.
-// The SDK will automatically route to the "private" endpoint for USDM Futures:
-wsClient.subscribeUsdFuturesUserDataStream();
-```
-
-#### Legacy `wsClient.subscribe*()` methods
-
-If you're using any of the per-topic convenience methods, such as `wsClient.subscribeAggregateTrades(...)`, no change is required. The SDK will automatically route the topic subscription request to the appropriate WS URL.
-
-## Further Reading
-
-For detailed examples, refer to the examples in this folder, as well as the following documentation:
-
-- Binance JavaScript SDK QuickStart Guide: https://siebly.io/sdk/binance/javascript
-- Binance JavaScript SDK Readme: https://www.npmjs.com/package/binance
 
 ================
 File: examples/README.md
@@ -3902,288 +4185,6 @@ export interface WsAPIOperationResponseMap {
 /**
    * SOR responses
    */
-
-================
-File: src/types/websockets/ws-general.ts
-================
-import { AxiosRequestConfig } from 'axios';
-import type { ClientRequestArgs } from 'http';
-import WebSocket from 'isomorphic-ws';
-⋮----
-import { RestClientOptions } from '../../util/requestUtils';
-import { WsKey } from '../../util/websockets/websocket-util';
-⋮----
-export interface MessageEventLike {
-  target: WebSocket;
-  type: 'message';
-  data: string;
-}
-⋮----
-export function isMessageEvent(msg: unknown): msg is MessageEventLike
-⋮----
-export type WsMarket =
-  | 'spot'
-  | 'spotTestnet'
-  | 'crossMargin'
-  | 'isolatedMargin'
-  | 'riskDataMargin'
-  | 'usdm'
-  | 'usdmTestnet'
-  | 'coinm'
-  | 'coinmTestnet'
-  | 'options'
-  | 'optionsTestnet'
-  | 'portfoliom'
-  | 'alpha';
-⋮----
-export interface WsSharedBase {
-  wsMarket: WsMarket;
-  wsKey: WsKey;
-  streamName: string;
-}
-⋮----
-export interface WsResponse {
-  type: 'message';
-  data: {
-    result: boolean | string[] | null;
-    id: number;
-    isWSAPIResponse: boolean;
-    wsKey: WsKey;
-  };
-}
-⋮----
-// Same as inverse futures
-export type WsPublicInverseTopic =
-  | 'orderBookL2_25'
-  | 'orderBookL2_200'
-  | 'trade'
-  | 'insurance'
-  | 'instrument_info'
-  | 'klineV2';
-⋮----
-export type WsPublicUSDTPerpTopic =
-  | 'orderBookL2_25'
-  | 'orderBookL2_200'
-  | 'trade'
-  | 'insurance'
-  | 'instrument_info'
-  | 'kline';
-⋮----
-export type WsPublicSpotV1Topic =
-  | 'trade'
-  | 'realtimes'
-  | 'kline'
-  | 'mergedDepth'
-  | 'diffDepth';
-⋮----
-export type WsPublicSpotV2Topic = 'depth' | 'kline' | 'trade' | 'realtimes';
-⋮----
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#public-high-frequency-public-data
-export type WsPublicUSDMTopic = 'bookTicker' | 'depth';
-⋮----
-// https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Important-WebSocket-Change-Notice#market-regular-market-data
-export type WsMarketUSDMTopic =
-  | 'aggTrade'
-  | 'markPrice'
-  | 'kline'
-  | 'continuousKline'
-  | 'miniTicker'
-  | 'ticker'
-  | 'forceOrder'
-  | 'compositeIndex'
-  | 'contractInfo'
-  | 'assetIndex';
-⋮----
-export type WsPublicTopics =
-  | WsPublicInverseTopic
-  | WsPublicUSDTPerpTopic
-  | WsPublicSpotV1Topic
-  | WsPublicSpotV2Topic
-  | WsMarketUSDMTopic
-  | WsPublicUSDMTopic
-  | string;
-⋮----
-// Same as inverse futures
-export type WsPrivateInverseTopic =
-  | 'position'
-  | 'execution'
-  | 'order'
-  | 'stop_order';
-⋮----
-export type WsPrivateUSDTPerpTopic =
-  | 'position'
-  | 'execution'
-  | 'order'
-  | 'stop_order'
-  | 'wallet';
-⋮----
-export type WsPrivateSpotTopic =
-  | 'outboundAccountInfo'
-  | 'executionReport'
-  | 'ticketInfo';
-⋮----
-export type WsPrivateTopic =
-  | WsPrivateInverseTopic
-  | WsPrivateUSDTPerpTopic
-  | WsPrivateSpotTopic
-  | string;
-⋮----
-export type WsTopic = WsPublicTopics | WsPrivateTopic;
-⋮----
-export interface WSClientConfigurableOptions {
-  /** Your API key */
-  api_key?: string;
-
-  /** Your API secret */
-  api_secret?: string;
-
-  beautify?: boolean;
-
-  /**
-   * If true, log a warning if the beautifier is missing anything for an event
-   */
-  beautifyWarnIfMissing?: boolean;
-
-  /**
-   * Set to `true` to connect to Binance's testnet environment.
-   *
-   * Notes:
-   * - Not all WebSocket categories support testnet.
-   * - If testing a strategy, this is not recommended. Testnet market data is very different from real market conditions. More guidance here: https://github.com/tiagosiebler/awesome-crypto-examples/wiki/CEX-Testnets
-   */
-  testnet?: boolean;
-
-  /**
-   * Set to `true` to use Binance's demo trading WebSocket endpoints.
-   * Demo trading uses real market data but simulated trading.
-   * More info: https://demo.binance.com/
-   *
-   * Notes:
-   * - If demo trading, `testnet` should be set to false!
-   * - If testing a strategy, use demo trading instead. Testnet market data is very different from real market conditions.
-   */
-  demoTrading?: boolean;
-
-  /**
-   * Default: false. If true, use market maker endpoints when available.
-   * Eligible for high-frequency trading users who have enrolled and qualified
-   * in at least one of the Futures Liquidity Provider Programs.
-   * More info: https://www.binance.com/en/support/faq/detail/7df7f3838c3b49e692d175374c3a3283
-   */
-  useMMSubdomain?: boolean;
-
-  /** Define a recv window when preparing a private websocket signature. This is in milliseconds, so 5000 == 5 seconds */
-  recvWindow?: number;
-
-  // Disable ping/pong ws heartbeat mechanism (not recommended)
-  disableHeartbeat?: boolean;
-
-  /** How often to check if the connection is alive */
-  pingInterval?: number;
-
-  /** How long to wait for a pong (heartbeat reply) before assuming the connection is dead */
-  pongTimeout?: number;
-
-  /** Delay in milliseconds before respawning the connection */
-  reconnectTimeout?: number;
-
-  restOptions?: RestClientOptions;
-
-  requestOptions?: AxiosRequestConfig;
-
-  wsOptions?: {
-    protocols?: string[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    agent?: any;
-  } & (
-    | Omit<Partial<WebSocket.ClientOptions>, 'agent'>
-    | Omit<Partial<ClientRequestArgs>, 'agent'>
-  );
-
-  wsUrl?: string;
-
-  /**
-   * Allows you to provide a custom "signMessage" function, e.g. to use node's much faster createHmac method
-   *
-   * Look in the examples folder for a demonstration on using node's createHmac instead.
-   */
-  customSignMessageFn?: (message: string, secret: string) => Promise<string>;
-
-  /**
-   * Optional custom JSON parser used for incoming WS messages.
-   * Defaults to JSON.parse.
-   */
-  customParseJSONFn?: (raw: string) => object;
-}
-⋮----
-/** Your API key */
-⋮----
-/** Your API secret */
-⋮----
-/**
-   * If true, log a warning if the beautifier is missing anything for an event
-   */
-⋮----
-/**
-   * Set to `true` to connect to Binance's testnet environment.
-   *
-   * Notes:
-   * - Not all WebSocket categories support testnet.
-   * - If testing a strategy, this is not recommended. Testnet market data is very different from real market conditions. More guidance here: https://github.com/tiagosiebler/awesome-crypto-examples/wiki/CEX-Testnets
-   */
-⋮----
-/**
-   * Set to `true` to use Binance's demo trading WebSocket endpoints.
-   * Demo trading uses real market data but simulated trading.
-   * More info: https://demo.binance.com/
-   *
-   * Notes:
-   * - If demo trading, `testnet` should be set to false!
-   * - If testing a strategy, use demo trading instead. Testnet market data is very different from real market conditions.
-   */
-⋮----
-/**
-   * Default: false. If true, use market maker endpoints when available.
-   * Eligible for high-frequency trading users who have enrolled and qualified
-   * in at least one of the Futures Liquidity Provider Programs.
-   * More info: https://www.binance.com/en/support/faq/detail/7df7f3838c3b49e692d175374c3a3283
-   */
-⋮----
-/** Define a recv window when preparing a private websocket signature. This is in milliseconds, so 5000 == 5 seconds */
-⋮----
-// Disable ping/pong ws heartbeat mechanism (not recommended)
-⋮----
-/** How often to check if the connection is alive */
-⋮----
-/** How long to wait for a pong (heartbeat reply) before assuming the connection is dead */
-⋮----
-/** Delay in milliseconds before respawning the connection */
-⋮----
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-⋮----
-/**
-   * Allows you to provide a custom "signMessage" function, e.g. to use node's much faster createHmac method
-   *
-   * Look in the examples folder for a demonstration on using node's createHmac instead.
-   */
-⋮----
-/**
-   * Optional custom JSON parser used for incoming WS messages.
-   * Defaults to JSON.parse.
-   */
-⋮----
-/**
- * WS configuration that's always defined, regardless of user configuration
- * (usually comes from defaults if there's no user-provided values)
- */
-export interface WebsocketClientOptions extends WSClientConfigurableOptions {
-  pongTimeout: number;
-  pingInterval: number;
-  reconnectTimeout: number;
-  recvWindow: number;
-  authPrivateConnectionsOnConnect: boolean;
-  authPrivateRequestsIndividually: boolean;
-}
 
 ================
 File: examples/Rest/Futures/rest-future-bracket-order.ts
@@ -14263,766 +14264,6 @@ If you want to learn more about integrating with Binance APIs and WebSockets:
 - Explore the wider SDK ecosystem: [Siebly.io](https://siebly.io)
 
 ================
-File: src/types/websockets/ws-api-requests.ts
-================
-import {
-  FuturesAlgoConditionalOrderTypes,
-  FuturesAlgoOrderType,
-  FuturesOrderType,
-  PositionSide,
-  PriceMatchMode,
-  WorkingType,
-} from '../futures';
-import {
-  BooleanString,
-  KlineInterval,
-  numberInString,
-  OrderResponseType,
-  OrderSide,
-  OrderTimeInForce,
-  OrderType,
-  SelfTradePreventionMode,
-} from '../shared';
-⋮----
-/**
- * Simple request params with timestamp (required) & recv window (optional)
- */
-export type WSAPIRecvWindowTimestamp = {
-  recvWindow?: number;
-  timestamp: number;
-};
-⋮----
-/**
- *
- * Authentication request types
- *
- */
-export interface WSAPISessionLogonRequest {
-  timestamp: number;
-}
-⋮----
-/**
- *
- * General request types
- *
- */
-export interface WSAPIExchangeInfoRequest {
-  symbol?: string;
-  symbols?: string[];
-  permissions?: string[];
-  showPermissionSets?: boolean;
-  symbolStatus?: string;
-}
-⋮----
-/**
- *
- * Market data request types
- *
- */
-⋮----
-export interface WSAPIOrderBookRequest {
-  symbol: string;
-  limit?: number;
-  symbolStatus?: string;
-}
-⋮----
-export interface WSAPITradesRecentRequest {
-  symbol: string;
-  limit?: number;
-}
-⋮----
-export interface WSAPITradesHistoricalRequest {
-  symbol: string;
-  fromId?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIBlockTradesHistoricalRequest {
-  symbol: string;
-  fromId: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPITradesAggregateRequest {
-  symbol: string;
-  fromId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIKlinesRequest {
-  symbol: string;
-  interval: KlineInterval;
-  startTime?: number;
-  endTime?: number;
-  timeZone?: string;
-  limit?: number;
-}
-⋮----
-export interface WSAPIAvgPriceRequest {
-  symbol: string;
-}
-⋮----
-/**
- * Query execution rules (e.g. PRICE_RANGE). Only one of symbol, symbols, or symbolStatus per request.
- */
-export interface WSAPIExecutionRulesRequest {
-  symbol?: string;
-  symbols?: string[];
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
-}
-⋮----
-export interface WSAPIReferencePriceRequest {
-  symbol: string;
-}
-⋮----
-export interface WSAPIReferencePriceCalculationRequest {
-  symbol: string;
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITicker24hrRequest {
-  symbol?: string;
-  symbols?: string[];
-  type?: 'FULL' | 'MINI';
-  symbolStatus?: string;
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerTradingDayRequest {
-  symbol?: string;
-  symbols?: string[];
-  timeZone?: string;
-  type?: 'FULL' | 'MINI';
-  symbolStatus?: string;
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerRequest {
-  symbol?: string;
-  symbols?: string[];
-  windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
-  type?: 'FULL' | 'MINI';
-  symbolStatus?: string;
-}
-⋮----
-windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerPriceRequest {
-  symbol?: string;
-  symbols?: string[];
-  symbolStatus?: string;
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerBookRequest {
-  symbol?: string;
-  symbols?: string[];
-  symbolStatus?: string;
-}
-⋮----
-/**
- *
- * Account request types - Spot
- *
- */
-⋮----
-export interface WSAPIAllOrdersRequest {
-  symbol: string;
-  orderId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIAllOrderListsRequest {
-  fromId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIMyTradesRequest {
-  symbol: string;
-  orderId?: number;
-  startTime?: number;
-  endTime?: number;
-  fromId?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIMyPreventedMatchesRequest {
-  symbol: string;
-  preventedMatchId?: number;
-  orderId?: number;
-  fromPreventedMatchId?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIMyAllocationsRequest {
-  symbol: string;
-  startTime?: number;
-  endTime?: number;
-  fromAllocationId?: number;
-  limit?: number;
-  orderId?: number;
-}
-⋮----
-/**
- * Trading request types
- */
-type SpotPegPriceType = 'PRIMARY_PEG' | 'MARKET_PEG';
-type SpotPegOffsetType = 'PRICE_LEVEL';
-⋮----
-export interface WSAPINewSpotOrderRequest {
-  symbol: string;
-  side: OrderSide;
-  type: OrderType;
-  timeInForce?: OrderTimeInForce;
-  price?: numberInString;
-  quantity?: numberInString;
-  quoteOrderQty?: numberInString;
-  newClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  pegPriceType?: SpotPegPriceType;
-  pegOffsetValue?: number;
-  pegOffsetType?: SpotPegOffsetType;
-}
-⋮----
-export interface WSAPIOrderTestRequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  type: string;
-  timeInForce?: string;
-  price?: numberInString;
-  quantity?: numberInString;
-  quoteOrderQty?: numberInString;
-  newClientOrderId?: string;
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  pegPriceType?: SpotPegPriceType;
-  pegOffsetValue?: number;
-  pegOffsetType?: SpotPegOffsetType;
-  computeCommissionRates?: boolean;
-  timestamp: number;
-  recvWindow?: number;
-}
-⋮----
-export interface WSAPIOrderStatusRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderCancelRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  newClientOrderId?: string;
-  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderCancelReplaceRequest {
-  symbol: string;
-  cancelReplaceMode: 'STOP_ON_FAILURE' | 'ALLOW_FAILURE';
-  cancelOrderId?: number;
-  cancelOrigClientOrderId?: string;
-  cancelNewClientOrderId?: string;
-  side: 'BUY' | 'SELL';
-  type: string;
-  timeInForce?: string;
-  price?: numberInString;
-  quantity?: numberInString;
-  quoteOrderQty?: numberInString;
-  newClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  pegPriceType?: SpotPegPriceType;
-  pegOffsetValue?: number;
-  pegOffsetType?: SpotPegOffsetType;
-  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
-  orderRateLimitExceededMode?: 'DO_NOTHING' | 'CANCEL_ONLY';
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderAmendKeepPriorityRequest {
-  symbol: string;
-  orderId?: number | string;
-  origClientOrderId?: string;
-  newClientOrderId?: string;
-  newQty?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOpenOrdersStatusRequest {
-  symbol?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOpenOrdersCancelAllRequest {
-  symbol: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-/**
- * Order list request types
- */
-export interface WSAPIOrderListPlaceRequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  price: numberInString;
-  quantity: numberInString;
-  listClientOrderId?: string;
-  limitClientOrderId?: string;
-  limitIcebergQty?: numberInString;
-  limitStrategyId?: number;
-  limitStrategyType?: number;
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  stopClientOrderId?: string;
-  stopLimitPrice?: numberInString;
-  stopLimitTimeInForce?: string;
-  stopIcebergQty?: numberInString;
-  stopStrategyId?: number;
-  stopStrategyType?: number;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOCORequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: numberInString;
-  listClientOrderId?: string;
-  aboveType:
-    | 'STOP_LOSS_LIMIT'
-    | 'STOP_LOSS'
-    | 'LIMIT_MAKER'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  aboveClientOrderId?: string;
-  aboveIcebergQty?: numberInString;
-  abovePrice?: numberInString;
-  aboveStopPrice?: numberInString;
-  aboveTrailingDelta?: number;
-  aboveTimeInForce?: string;
-  aboveStrategyId?: number;
-  aboveStrategyType?: number;
-  belowType:
-    | 'STOP_LOSS'
-    | 'STOP_LOSS_LIMIT'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT'
-    | 'LIMIT_MAKER';
-  belowClientOrderId?: string;
-  belowIcebergQty?: numberInString;
-  belowPrice?: numberInString;
-  belowStopPrice?: numberInString;
-  belowTrailingDelta?: number;
-  belowTimeInForce?: string;
-  belowStrategyId?: number;
-  belowStrategyType?: number;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOTORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  pendingType: string;
-  pendingSide: 'BUY' | 'SELL';
-  pendingClientOrderId?: string;
-  pendingPrice?: numberInString;
-  pendingStopPrice?: numberInString;
-  pendingTrailingDelta?: numberInString;
-  pendingQuantity: numberInString;
-  pendingIcebergQty?: numberInString;
-  pendingTimeInForce?: string;
-  pendingStrategyId?: number;
-  pendingStrategyType?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOTOCORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  pendingSide: 'BUY' | 'SELL';
-  pendingQuantity: number | string;
-  pendingAboveType:
-    | 'STOP_LOSS_LIMIT'
-    | 'STOP_LOSS'
-    | 'LIMIT_MAKER'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  pendingAboveClientOrderId?: string;
-  pendingAbovePrice?: numberInString;
-  pendingAboveStopPrice?: numberInString;
-  pendingAboveTrailingDelta?: numberInString;
-  pendingAboveIcebergQty?: numberInString;
-  pendingAboveTimeInForce?: string;
-  pendingAboveStrategyId?: number;
-  pendingAboveStrategyType?: number;
-  pendingBelowType:
-    | 'STOP_LOSS'
-    | 'STOP_LOSS_LIMIT'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT'
-    | 'LIMIT_MAKER';
-  pendingBelowClientOrderId?: string;
-  pendingBelowPrice?: numberInString;
-  pendingBelowStopPrice?: numberInString;
-  pendingBelowTrailingDelta?: numberInString;
-  pendingBelowIcebergQty?: numberInString;
-  pendingBelowTimeInForce?: string;
-  pendingBelowStrategyId?: number;
-  pendingBelowStrategyType?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOPORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  workingPegPriceType?: string;
-  workingPegOffsetType?: string;
-  workingPegOffsetValue?: number;
-  pendingType: string;
-  pendingSide: 'BUY' | 'SELL';
-  pendingClientOrderId?: string;
-  pendingPrice?: numberInString;
-  pendingStopPrice?: numberInString;
-  pendingTrailingDelta?: numberInString;
-  pendingIcebergQty?: numberInString;
-  pendingTimeInForce?: string;
-  pendingStrategyId?: number;
-  pendingStrategyType?: number;
-  pendingPegPriceType?: string;
-  pendingPegOffsetType?: string;
-  pendingPegOffsetValue?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOPOCORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  workingPegPriceType?: string;
-  workingPegOffsetType?: string;
-  workingPegOffsetValue?: number;
-  pendingSide: 'BUY' | 'SELL';
-  pendingAboveType:
-    | 'STOP_LOSS_LIMIT'
-    | 'STOP_LOSS'
-    | 'LIMIT_MAKER'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  pendingAboveClientOrderId?: string;
-  pendingAbovePrice?: numberInString;
-  pendingAboveStopPrice?: numberInString;
-  pendingAboveTrailingDelta?: numberInString;
-  pendingAboveIcebergQty?: numberInString;
-  pendingAboveTimeInForce?: string;
-  pendingAboveStrategyId?: number;
-  pendingAboveStrategyType?: number;
-  pendingAbovePegPriceType?: string;
-  pendingAbovePegOffsetType?: string;
-  pendingAbovePegOffsetValue?: number;
-  pendingBelowType?:
-    | 'STOP_LOSS'
-    | 'STOP_LOSS_LIMIT'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  pendingBelowClientOrderId?: string;
-  pendingBelowPrice?: numberInString;
-  pendingBelowStopPrice?: numberInString;
-  pendingBelowTrailingDelta?: numberInString;
-  pendingBelowIcebergQty?: numberInString;
-  pendingBelowTimeInForce?: string;
-  pendingBelowStrategyId?: number;
-  pendingBelowStrategyType?: number;
-  pendingBelowPegPriceType?: string;
-  pendingBelowPegOffsetType?: string;
-  pendingBelowPegOffsetValue?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListStatusRequest {
-  origClientOrderId?: string;
-  orderListId?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListCancelRequest {
-  symbol: string;
-  orderListId?: number;
-  listClientOrderId?: string;
-  newClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-/**
- * SOR request types
- */
-export interface WSAPISOROrderPlaceRequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  type: 'LIMIT' | 'MARKET';
-  timeInForce?: string;
-  price?: numberInString;
-  quantity: numberInString;
-  newClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: string;
-  timestamp: number;
-  recvWindow?: number;
-}
-⋮----
-export type WSAPISOROrderTestRequest = WSAPISOROrderPlaceRequest & {
-  computeCommissionRates?: boolean;
-};
-⋮----
-/**
- * Futures market data request types
- */
-⋮----
-export interface WSAPIFuturesOrderBookRequest {
-  symbol: string;
-  limit?: number;
-}
-⋮----
-export interface WSAPIFuturesTickerPriceRequest {
-  symbol?: string;
-}
-⋮----
-export interface WSAPIFuturesTickerBookRequest {
-  symbol?: string;
-}
-⋮----
-/**
- * Futures trading request types
- */
-⋮----
-export interface WSAPINewFuturesOrderRequest<numberType = numberInString> {
-  symbol: string;
-  side: OrderSide;
-  positionSide?: PositionSide;
-  type: FuturesOrderType;
-  timeInForce?: OrderTimeInForce;
-  quantity?: numberType;
-  reduceOnly?: BooleanString;
-  price?: numberType;
-  newClientOrderId?: string;
-  stopPrice?: numberType;
-  closePosition?: BooleanString;
-  activationPrice?: numberType;
-  callbackRate?: numberType;
-  workingType?: WorkingType;
-  priceProtect?: BooleanString;
-  newOrderRespType?: 'ACK' | 'RESULT';
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  priceMatch?: PriceMatchMode;
-  goodTillDate?: number; // Mandatory when timeInForce is GTD
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-goodTillDate?: number; // Mandatory when timeInForce is GTD
-⋮----
-export interface WSAPIFuturesOrderModifyRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  side: 'BUY' | 'SELL';
-  quantity: numberInString;
-  price: numberInString;
-  priceMatch?:
-    | 'NONE'
-    | 'OPPONENT'
-    | 'OPPONENT_5'
-    | 'OPPONENT_10'
-    | 'OPPONENT_20'
-    | 'QUEUE'
-    | 'QUEUE_5'
-    | 'QUEUE_10'
-    | 'QUEUE_20';
-  origType?: string;
-  positionSide?: 'BOTH' | 'LONG' | 'SHORT';
-  modifyId?: number;
-  reduceOnly?: BooleanString;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesOrderCancelRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesOrderStatusRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesPositionRequest {
-  symbol?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesPositionV2Request {
-  symbol?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIAccountInformationRequest {
-  omitZeroBalances?: boolean;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIAccountCommissionWSAPIRequest {
-  symbol: string;
-}
-⋮----
-/**
- * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api
- */
-export interface WSAPINewFuturesAlgoOrderRequest<numberType = numberInString> {
-  algoType: FuturesAlgoOrderType;
-  symbol: string;
-  side: OrderSide;
-  positionSide?: PositionSide;
-  type: FuturesAlgoConditionalOrderTypes;
-  timeInForce?: OrderTimeInForce;
-  quantity?: numberType;
-  reduceOnly?: BooleanString;
-  price?: numberInString;
-  clientAlgoId?: string;
-  triggerPrice?: numberInString;
-  closePosition?: BooleanString;
-  activatePrice?: numberInString;
-  callbackRate?: numberInString;
-  workingType?: WorkingType;
-  priceProtect?: BooleanString;
-  newOrderRespType?: OrderResponseType;
-  priceMatch?: PriceMatchMode;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  goodTillDate?: number; // Mandatory when timeInForce is GTD
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-goodTillDate?: number; // Mandatory when timeInForce is GTD
-⋮----
-/**
- * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api/Cancel-Algo-Order
- */
-export interface WSAPIFuturesAlgoOrderCancelRequest {
-  algoid?: number;
-  clientalgoid?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-
-================
 File: src/types/futures.ts
 ================
 import {
@@ -16341,6 +15582,8 @@ constructor(options?: WSClientConfigurableOptions, logger?: DefaultLogger)
 ⋮----
 // fn pointers:
 ⋮----
+protected onWsCloseCleanup(wsKey: WsKey): void
+⋮----
 private getUserDataStreamManager(): UserDataStreamManager
 ⋮----
 private getRestClientOptions(): RestClientOptions
@@ -17378,6 +16621,766 @@ public subscribeSpotDiffBookDepth(
 ): Promise<unknown>
 
 ================
+File: src/types/websockets/ws-api-requests.ts
+================
+import {
+  FuturesAlgoConditionalOrderTypes,
+  FuturesAlgoOrderType,
+  FuturesOrderType,
+  PositionSide,
+  PriceMatchMode,
+  WorkingType,
+} from '../futures';
+import {
+  BooleanString,
+  KlineInterval,
+  numberInString,
+  OrderResponseType,
+  OrderSide,
+  OrderTimeInForce,
+  OrderType,
+  SelfTradePreventionMode,
+} from '../shared';
+⋮----
+/**
+ * Simple request params with timestamp (required) & recv window (optional)
+ */
+export type WSAPIRecvWindowTimestamp = {
+  recvWindow?: number;
+  timestamp: number;
+};
+⋮----
+/**
+ *
+ * Authentication request types
+ *
+ */
+export interface WSAPISessionLogonRequest {
+  timestamp: number;
+}
+⋮----
+/**
+ *
+ * General request types
+ *
+ */
+export interface WSAPIExchangeInfoRequest {
+  symbol?: string;
+  symbols?: string[];
+  permissions?: string[];
+  showPermissionSets?: boolean;
+  symbolStatus?: string;
+}
+⋮----
+/**
+ *
+ * Market data request types
+ *
+ */
+⋮----
+export interface WSAPIOrderBookRequest {
+  symbol: string;
+  limit?: number;
+  symbolStatus?: string;
+}
+⋮----
+export interface WSAPITradesRecentRequest {
+  symbol: string;
+  limit?: number;
+}
+⋮----
+export interface WSAPITradesHistoricalRequest {
+  symbol: string;
+  fromId?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIBlockTradesHistoricalRequest {
+  symbol: string;
+  fromId: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPITradesAggregateRequest {
+  symbol: string;
+  fromId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIKlinesRequest {
+  symbol: string;
+  interval: KlineInterval;
+  startTime?: number;
+  endTime?: number;
+  timeZone?: string;
+  limit?: number;
+}
+⋮----
+export interface WSAPIAvgPriceRequest {
+  symbol: string;
+}
+⋮----
+/**
+ * Query execution rules (e.g. PRICE_RANGE). Only one of symbol, symbols, or symbolStatus per request.
+ */
+export interface WSAPIExecutionRulesRequest {
+  symbol?: string;
+  symbols?: string[];
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
+}
+⋮----
+export interface WSAPIReferencePriceRequest {
+  symbol: string;
+}
+⋮----
+export interface WSAPIReferencePriceCalculationRequest {
+  symbol: string;
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITicker24hrRequest {
+  symbol?: string;
+  symbols?: string[];
+  type?: 'FULL' | 'MINI';
+  symbolStatus?: string;
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerTradingDayRequest {
+  symbol?: string;
+  symbols?: string[];
+  timeZone?: string;
+  type?: 'FULL' | 'MINI';
+  symbolStatus?: string;
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerRequest {
+  symbol?: string;
+  symbols?: string[];
+  windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
+  type?: 'FULL' | 'MINI';
+  symbolStatus?: string;
+}
+⋮----
+windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerPriceRequest {
+  symbol?: string;
+  symbols?: string[];
+  symbolStatus?: string;
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerBookRequest {
+  symbol?: string;
+  symbols?: string[];
+  symbolStatus?: string;
+}
+⋮----
+/**
+ *
+ * Account request types - Spot
+ *
+ */
+⋮----
+export interface WSAPIAllOrdersRequest {
+  symbol: string;
+  orderId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIAllOrderListsRequest {
+  fromId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIMyTradesRequest {
+  symbol: string;
+  orderId?: number;
+  startTime?: number;
+  endTime?: number;
+  fromId?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIMyPreventedMatchesRequest {
+  symbol: string;
+  preventedMatchId?: number;
+  orderId?: number;
+  fromPreventedMatchId?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIMyAllocationsRequest {
+  symbol: string;
+  startTime?: number;
+  endTime?: number;
+  fromAllocationId?: number;
+  limit?: number;
+  orderId?: number;
+}
+⋮----
+/**
+ * Trading request types
+ */
+type SpotPegPriceType = 'PRIMARY_PEG' | 'MARKET_PEG';
+type SpotPegOffsetType = 'PRICE_LEVEL';
+⋮----
+export interface WSAPINewSpotOrderRequest {
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  timeInForce?: OrderTimeInForce;
+  price?: numberInString;
+  quantity?: numberInString;
+  quoteOrderQty?: numberInString;
+  newClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  pegPriceType?: SpotPegPriceType;
+  pegOffsetValue?: number;
+  pegOffsetType?: SpotPegOffsetType;
+}
+⋮----
+export interface WSAPIOrderTestRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  type: string;
+  timeInForce?: string;
+  price?: numberInString;
+  quantity?: numberInString;
+  quoteOrderQty?: numberInString;
+  newClientOrderId?: string;
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  pegPriceType?: SpotPegPriceType;
+  pegOffsetValue?: number;
+  pegOffsetType?: SpotPegOffsetType;
+  computeCommissionRates?: boolean;
+  timestamp: number;
+  recvWindow?: number;
+}
+⋮----
+export interface WSAPIOrderStatusRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderCancelRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  newClientOrderId?: string;
+  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderCancelReplaceRequest {
+  symbol: string;
+  cancelReplaceMode: 'STOP_ON_FAILURE' | 'ALLOW_FAILURE';
+  cancelOrderId?: number;
+  cancelOrigClientOrderId?: string;
+  cancelNewClientOrderId?: string;
+  side: 'BUY' | 'SELL';
+  type: string;
+  timeInForce?: string;
+  price?: numberInString;
+  quantity?: numberInString;
+  quoteOrderQty?: numberInString;
+  newClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  pegPriceType?: SpotPegPriceType;
+  pegOffsetValue?: number;
+  pegOffsetType?: SpotPegOffsetType;
+  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
+  orderRateLimitExceededMode?: 'DO_NOTHING' | 'CANCEL_ONLY';
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderAmendKeepPriorityRequest {
+  symbol: string;
+  orderId?: number | string;
+  origClientOrderId?: string;
+  newClientOrderId?: string;
+  newQty?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOpenOrdersStatusRequest {
+  symbol?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOpenOrdersCancelAllRequest {
+  symbol: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/**
+ * Order list request types
+ */
+export interface WSAPIOrderListPlaceRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  price: numberInString;
+  quantity: numberInString;
+  listClientOrderId?: string;
+  limitClientOrderId?: string;
+  limitIcebergQty?: numberInString;
+  limitStrategyId?: number;
+  limitStrategyType?: number;
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  stopClientOrderId?: string;
+  stopLimitPrice?: numberInString;
+  stopLimitTimeInForce?: string;
+  stopIcebergQty?: numberInString;
+  stopStrategyId?: number;
+  stopStrategyType?: number;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListPlaceOCORequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  quantity: numberInString;
+  listClientOrderId?: string;
+  aboveType:
+    | 'STOP_LOSS_LIMIT'
+    | 'STOP_LOSS'
+    | 'LIMIT_MAKER'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  aboveClientOrderId?: string;
+  aboveIcebergQty?: numberInString;
+  abovePrice?: numberInString;
+  aboveStopPrice?: numberInString;
+  aboveTrailingDelta?: number;
+  aboveTimeInForce?: string;
+  aboveStrategyId?: number;
+  aboveStrategyType?: number;
+  belowType:
+    | 'STOP_LOSS'
+    | 'STOP_LOSS_LIMIT'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT'
+    | 'LIMIT_MAKER';
+  belowClientOrderId?: string;
+  belowIcebergQty?: numberInString;
+  belowPrice?: numberInString;
+  belowStopPrice?: numberInString;
+  belowTrailingDelta?: number;
+  belowTimeInForce?: string;
+  belowStrategyId?: number;
+  belowStrategyType?: number;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListPlaceOTORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  pendingType: string;
+  pendingSide: 'BUY' | 'SELL';
+  pendingClientOrderId?: string;
+  pendingPrice?: numberInString;
+  pendingStopPrice?: numberInString;
+  pendingTrailingDelta?: numberInString;
+  pendingQuantity: numberInString;
+  pendingIcebergQty?: numberInString;
+  pendingTimeInForce?: string;
+  pendingStrategyId?: number;
+  pendingStrategyType?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListPlaceOTOCORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  pendingSide: 'BUY' | 'SELL';
+  pendingQuantity: number | string;
+  pendingAboveType:
+    | 'STOP_LOSS_LIMIT'
+    | 'STOP_LOSS'
+    | 'LIMIT_MAKER'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  pendingAboveClientOrderId?: string;
+  pendingAbovePrice?: numberInString;
+  pendingAboveStopPrice?: numberInString;
+  pendingAboveTrailingDelta?: numberInString;
+  pendingAboveIcebergQty?: numberInString;
+  pendingAboveTimeInForce?: string;
+  pendingAboveStrategyId?: number;
+  pendingAboveStrategyType?: number;
+  pendingBelowType:
+    | 'STOP_LOSS'
+    | 'STOP_LOSS_LIMIT'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT'
+    | 'LIMIT_MAKER';
+  pendingBelowClientOrderId?: string;
+  pendingBelowPrice?: numberInString;
+  pendingBelowStopPrice?: numberInString;
+  pendingBelowTrailingDelta?: numberInString;
+  pendingBelowIcebergQty?: numberInString;
+  pendingBelowTimeInForce?: string;
+  pendingBelowStrategyId?: number;
+  pendingBelowStrategyType?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListPlaceOPORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  workingPegPriceType?: string;
+  workingPegOffsetType?: string;
+  workingPegOffsetValue?: number;
+  pendingType: string;
+  pendingSide: 'BUY' | 'SELL';
+  pendingClientOrderId?: string;
+  pendingPrice?: numberInString;
+  pendingStopPrice?: numberInString;
+  pendingTrailingDelta?: numberInString;
+  pendingIcebergQty?: numberInString;
+  pendingTimeInForce?: string;
+  pendingStrategyId?: number;
+  pendingStrategyType?: number;
+  pendingPegPriceType?: string;
+  pendingPegOffsetType?: string;
+  pendingPegOffsetValue?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListPlaceOPOCORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  workingPegPriceType?: string;
+  workingPegOffsetType?: string;
+  workingPegOffsetValue?: number;
+  pendingSide: 'BUY' | 'SELL';
+  pendingAboveType:
+    | 'STOP_LOSS_LIMIT'
+    | 'STOP_LOSS'
+    | 'LIMIT_MAKER'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  pendingAboveClientOrderId?: string;
+  pendingAbovePrice?: numberInString;
+  pendingAboveStopPrice?: numberInString;
+  pendingAboveTrailingDelta?: numberInString;
+  pendingAboveIcebergQty?: numberInString;
+  pendingAboveTimeInForce?: string;
+  pendingAboveStrategyId?: number;
+  pendingAboveStrategyType?: number;
+  pendingAbovePegPriceType?: string;
+  pendingAbovePegOffsetType?: string;
+  pendingAbovePegOffsetValue?: number;
+  pendingBelowType?:
+    | 'STOP_LOSS'
+    | 'STOP_LOSS_LIMIT'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  pendingBelowClientOrderId?: string;
+  pendingBelowPrice?: numberInString;
+  pendingBelowStopPrice?: numberInString;
+  pendingBelowTrailingDelta?: numberInString;
+  pendingBelowIcebergQty?: numberInString;
+  pendingBelowTimeInForce?: string;
+  pendingBelowStrategyId?: number;
+  pendingBelowStrategyType?: number;
+  pendingBelowPegPriceType?: string;
+  pendingBelowPegOffsetType?: string;
+  pendingBelowPegOffsetValue?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListStatusRequest {
+  origClientOrderId?: string;
+  orderListId?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListCancelRequest {
+  symbol: string;
+  orderListId?: number;
+  listClientOrderId?: string;
+  newClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/**
+ * SOR request types
+ */
+export interface WSAPISOROrderPlaceRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  type: 'LIMIT' | 'MARKET';
+  timeInForce?: string;
+  price?: numberInString;
+  quantity: numberInString;
+  newClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: string;
+  timestamp: number;
+  recvWindow?: number;
+}
+⋮----
+export type WSAPISOROrderTestRequest = WSAPISOROrderPlaceRequest & {
+  computeCommissionRates?: boolean;
+};
+⋮----
+/**
+ * Futures market data request types
+ */
+⋮----
+export interface WSAPIFuturesOrderBookRequest {
+  symbol: string;
+  limit?: number;
+}
+⋮----
+export interface WSAPIFuturesTickerPriceRequest {
+  symbol?: string;
+}
+⋮----
+export interface WSAPIFuturesTickerBookRequest {
+  symbol?: string;
+}
+⋮----
+/**
+ * Futures trading request types
+ */
+⋮----
+export interface WSAPINewFuturesOrderRequest<numberType = numberInString> {
+  symbol: string;
+  side: OrderSide;
+  positionSide?: PositionSide;
+  type: FuturesOrderType;
+  timeInForce?: OrderTimeInForce;
+  quantity?: numberType;
+  reduceOnly?: BooleanString;
+  price?: numberType;
+  newClientOrderId?: string;
+  stopPrice?: numberType;
+  closePosition?: BooleanString;
+  activationPrice?: numberType;
+  callbackRate?: numberType;
+  workingType?: WorkingType;
+  priceProtect?: BooleanString;
+  newOrderRespType?: 'ACK' | 'RESULT';
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  priceMatch?: PriceMatchMode;
+  goodTillDate?: number; // Mandatory when timeInForce is GTD
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+goodTillDate?: number; // Mandatory when timeInForce is GTD
+⋮----
+export interface WSAPIFuturesOrderModifyRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  side: 'BUY' | 'SELL';
+  quantity: numberInString;
+  price: numberInString;
+  priceMatch?:
+    | 'NONE'
+    | 'OPPONENT'
+    | 'OPPONENT_5'
+    | 'OPPONENT_10'
+    | 'OPPONENT_20'
+    | 'QUEUE'
+    | 'QUEUE_5'
+    | 'QUEUE_10'
+    | 'QUEUE_20';
+  origType?: string;
+  positionSide?: 'BOTH' | 'LONG' | 'SHORT';
+  modifyId?: number;
+  reduceOnly?: BooleanString;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesOrderCancelRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesOrderStatusRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesPositionRequest {
+  symbol?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesPositionV2Request {
+  symbol?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIAccountInformationRequest {
+  omitZeroBalances?: boolean;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIAccountCommissionWSAPIRequest {
+  symbol: string;
+}
+⋮----
+/**
+ * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api
+ */
+export interface WSAPINewFuturesAlgoOrderRequest<numberType = numberInString> {
+  algoType: FuturesAlgoOrderType;
+  symbol: string;
+  side: OrderSide;
+  positionSide?: PositionSide;
+  type: FuturesAlgoConditionalOrderTypes;
+  timeInForce?: OrderTimeInForce;
+  quantity?: numberType;
+  reduceOnly?: BooleanString;
+  price?: numberInString;
+  clientAlgoId?: string;
+  triggerPrice?: numberInString;
+  closePosition?: BooleanString;
+  activatePrice?: numberInString;
+  callbackRate?: numberInString;
+  workingType?: WorkingType;
+  priceProtect?: BooleanString;
+  newOrderRespType?: OrderResponseType;
+  priceMatch?: PriceMatchMode;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  goodTillDate?: number; // Mandatory when timeInForce is GTD
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+goodTillDate?: number; // Mandatory when timeInForce is GTD
+⋮----
+/**
+ * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api/Cancel-Algo-Order
+ */
+export interface WSAPIFuturesAlgoOrderCancelRequest {
+  algoid?: number;
+  clientalgoid?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+
+================
 File: src/types/spot.ts
 ================
 import {
@@ -18110,7 +18113,7 @@ export interface SpotExecutionRulesResponse {
 export interface SpotExecutionRulesParams {
   symbol?: string;
   symbols?: string[];
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
 }
 ⋮----
 /** Successful GET /api/v3/referencePrice (referencePrice null = not currently set). */
@@ -25780,7 +25783,7 @@ getReferencePrice(params: {
 ⋮----
 getReferencePriceCalculation(params: {
     symbol: string;
-    symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+    symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
 }): Promise<SpotReferencePriceCalculationResponse>
 ⋮----
 get24hrChangeStatistics(params?: {
@@ -29257,7 +29260,7 @@ File: package.json
 ================
 {
   "name": "binance",
-  "version": "3.6.10",
+  "version": "3.6.12",
   "description": "Professional Node.js & JavaScript SDK for Binance REST APIs & WebSockets, with TypeScript & end-to-end tests.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
