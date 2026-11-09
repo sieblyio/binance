@@ -103,7 +103,7 @@ export interface WSAPIAvgPriceRequest {
 export interface WSAPIExecutionRulesRequest {
   symbol?: string;
   symbols?: string[];
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
 }
 
 export interface WSAPIReferencePriceRequest {
@@ -112,7 +112,7 @@ export interface WSAPIReferencePriceRequest {
 
 export interface WSAPIReferencePriceCalculationRequest {
   symbol: string;
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
 }
 
 /**

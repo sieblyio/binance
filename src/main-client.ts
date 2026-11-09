@@ -140,6 +140,8 @@ import {
   CreateInvestmentPlanParams,
   CreateInvestmentPlanResponse,
   CreateSpecialLowLatencyKeyParams,
+  CreateSubAccountApiKeyParams,
+  CreateSubAccountApiKeyResponse,
   CreateSubAccountParams,
   CrossMarginFeeData,
   CrossMarginTransferHistory,
@@ -151,6 +153,8 @@ import {
   DelegationHistory,
   DelegationHistoryParams,
   DeleteApiKeyBrokerSubAccountParams,
+  DeleteSubAccountApiKeyParams,
+  DeleteSubAccountApiKeyResponse,
   DelistScheduleResponse,
   DepositAddress,
   DepositAddressListParams,
@@ -343,6 +347,7 @@ import {
   GetSpotRebateHistoryRecordsResponse,
   GetStatisticListParams,
   GetStatisticListResponse,
+  GetSubAccountApiKeysParams,
   GetSubAccountDepositHistoryParams,
   GetSubscriptionTransactionHistoryParams,
   GetTargetAssetListParams,
@@ -416,6 +421,8 @@ import {
   MarginOTOCOOrder,
   MarginOTOOrder,
   MarginTransactionResponse,
+  ModifySubAccountApiKeyPermissionParams,
+  ModifySubAccountApiKeyPermissionResponse,
   NewFutureAccountTransferParams,
   NewOrderListOPOCOParams,
   NewOrderListOPOCOResponse,
@@ -567,6 +574,7 @@ import {
   StakingProductPosition,
   StakingProductType,
   SubAccountAddOrDeleteIPList,
+  SubAccountApiKey,
   SubAccountAssetDetails,
   SubAccountAssets,
   SubAccountAssetsParams,
@@ -870,7 +878,7 @@ export class MainClient extends BaseRestClient {
 
   getReferencePriceCalculation(params: {
     symbol: string;
-    symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+    symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
   }): Promise<SpotReferencePriceCalculationResponse> {
     return this.get('api/v3/referencePrice/calculation', params);
   }
@@ -1178,9 +1186,19 @@ export class MainClient extends BaseRestClient {
    *
    **/
 
+  /**
+   * Get cross margin collateral ratios.
+   * The additional ratio sets are undocumented in the endpoint reference but confirmed by Binance staff.
+   * @see https://dev.binance.vision/t/39429
+   */
   getCrossMarginCollateralRatio(): Promise<
     {
+      /** Liquidation collateral ratios. */
       collaterals: Collateral[];
+      /** Transfer-out collateral ratios (undocumented, confirmed by Binance staff). */
+      withdrawCollaterals?: Collateral[];
+      /** Borrow collateral ratios (undocumented, confirmed by Binance staff). */
+      borrowCollaterals?: Collateral[];
       assetNames: string[];
     }[]
   > {
@@ -2087,6 +2105,47 @@ export class MainClient extends BaseRestClient {
    * SUB ACCOUNT Endpoints - API management
    *
    **/
+
+  /**
+   * Query a sub-account's API keys (for master account).
+   */
+  getSubAccountApiKeys(
+    params: GetSubAccountApiKeysParams,
+  ): Promise<RowsWithTotal<SubAccountApiKey>> {
+    return this.getPrivate('sapi/v1/sub-account/subAccountApi', params);
+  }
+
+  /**
+   * Create a sub-account API key (for master account).
+   * Permission flags default to false. FIX permissions require an Ed25519 key.
+   */
+  createSubAccountApiKey(
+    params: CreateSubAccountApiKeyParams,
+  ): Promise<CreateSubAccountApiKeyResponse> {
+    return this.postPrivate('sapi/v1/sub-account/subAccountApi', params);
+  }
+
+  /**
+   * Delete a sub-account API key (for master account).
+   */
+  deleteSubAccountApiKey(
+    params: DeleteSubAccountApiKeyParams,
+  ): Promise<DeleteSubAccountApiKeyResponse> {
+    return this.deletePrivate('sapi/v1/sub-account/subAccountApi', params);
+  }
+
+  /**
+   * Modify a sub-account API key's permissions (for master account).
+   * FIX permissions require an Ed25519 key and remain unchanged when omitted.
+   */
+  modifySubAccountApiKeyPermission(
+    params: ModifySubAccountApiKeyPermissionParams,
+  ): Promise<ModifySubAccountApiKeyPermissionResponse> {
+    return this.postPrivate(
+      'sapi/v1/sub-account/subAccountApiPermission',
+      params,
+    );
+  }
 
   getSubAccountIPRestriction(
     params: BasicSubAccount,

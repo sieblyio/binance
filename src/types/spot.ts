@@ -698,7 +698,7 @@ export interface SpotExecutionRulesResponse {
 export interface SpotExecutionRulesParams {
   symbol?: string;
   symbols?: string[];
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK';
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
 }
 
 /** Successful GET /api/v3/referencePrice (referencePrice null = not currently set). */
@@ -1408,6 +1408,93 @@ export interface BasicSubAccount {
 
 export interface CreateSubAccountParams {
   subAccountString: string;
+}
+
+export interface GetSubAccountApiKeysParams {
+  email: string;
+  subAccountApiKey?: string;
+  /** Page number, default 1, minimum 1. */
+  page?: number;
+  /** Page size, default 30, maximum 100. */
+  size?: number;
+  recvWindow?: number;
+}
+
+export interface CreateSubAccountApiKeyParams {
+  email: string;
+  apiName: string;
+  /** 1: unrestricted, 2: trusted IPs only, 3: third-party IP restriction. */
+  status: 1 | 2 | 3;
+  canTrade?: boolean;
+  canMarginLoanRepay?: boolean;
+  canFuturesTrade?: boolean;
+  canUniversalTransfer?: boolean;
+  canVanillaOptions?: boolean;
+  /** FIX trading requires an Ed25519 key; other key types return -9000 when enabled. */
+  canFixApiTrading?: boolean;
+  /** FIX reading requires an Ed25519 key; other key types return -9000 when enabled. */
+  canFixApiReading?: boolean;
+  /** Required when status is 2. Maximum 500 characters. */
+  ipAddress?: string;
+  /** Required when status is 3. */
+  thirdPartyName?: string;
+  /** Ed25519 public key. */
+  publicKey?: string;
+  recvWindow?: number;
+}
+
+export interface CreateSubAccountApiKeyResponse {
+  apiName: string;
+  apiKey: string;
+  /** Returned only on creation. */
+  secretKey: string;
+  canTrade: boolean;
+  canMarginLoanRepay: boolean;
+  canFuturesTrade: boolean;
+  canUniversalTransfer: boolean;
+  canVanillaOptions: boolean;
+  canFixApiTrading: boolean;
+  canFixApiReading: boolean;
+  status: number;
+  ipList: string[];
+}
+
+export interface DeleteSubAccountApiKeyParams extends BasicSubAccount {
+  recvWindow?: number;
+}
+
+export type DeleteSubAccountApiKeyResponse = Record<string, never>;
+
+export interface ModifySubAccountApiKeyPermissionParams
+  extends BasicSubAccount {
+  canTrade?: boolean;
+  canMarginLoanRepay?: boolean;
+  canFuturesTrade?: boolean;
+  canUniversalTransfer?: boolean;
+  canVanillaOptions?: boolean;
+  /** Ed25519 keys only; omitted values remain unchanged. Other key types return -9000 when enabled. */
+  canFixApiTrading?: boolean;
+  /** Ed25519 keys only; omitted values remain unchanged. Other key types return -9000 when enabled. */
+  canFixApiReading?: boolean;
+  recvWindow?: number;
+}
+
+export interface ModifySubAccountApiKeyPermissionResponse {
+  apiName: string;
+  apikey: string;
+  canTrade: boolean;
+  canMarginLoanRepay: boolean;
+  canFuturesTrade: boolean;
+  canUniversalTransfer: boolean;
+  canVanillaOptions: boolean;
+  canFixApiTrading: boolean;
+  canFixApiReading: boolean;
+  timestamp: number;
+}
+
+export interface SubAccountApiKey
+  extends ModifySubAccountApiKeyPermissionResponse {
+  email: string;
 }
 
 export interface EnableOrDisableIPRestrictionForSubAccountParams
@@ -3209,6 +3296,7 @@ export interface MarginOrderCountUsageResponse {
 
 export interface Collateral {
   minUsdValue: string;
+  /** Omitted for the highest tier (no upper limit), confirmed by Binance staff on Dev Vision. */
   maxUsdValue?: string;
   discountRate: string;
 }
