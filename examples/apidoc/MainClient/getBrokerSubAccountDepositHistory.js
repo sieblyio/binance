@@ -4,7 +4,7 @@ import { MainClient } from 'binance';
 
 // This example shows how to call this Binance API endpoint with either node.js, javascript (js) or typescript (ts) with the npm module "binance" for Binance exchange
 // This Binance API SDK is available on npm via "npm install binance"
-// ENDPOINT: sapi/v1/broker/subAccount/depositHist
+// ENDPOINT: sapi/v1/bv1/apiReferral/ifNewUser
 // METHOD: GET
 // PUBLIC: NO
 
