@@ -4911,11 +4911,11 @@ export class MainClient extends BaseRestClient {
    * @deprecated, found only in old docs
    * Use EXCHANGE LINK endpoints instead
    **/
-  getBrokerIfNewSpotUser(params: { apiAgentCode: string }): Promise<{
+  getBrokerIfNewSpotUser(): Promise<{
     rebateWorking: boolean;
     ifNewUser: boolean;
   }> {
-    return this.getPrivate('sapi/v1/apiReferral/ifNewUser', params);
+    return this.getPrivate('sapi/v1/apiReferral/ifNewUser');
   }
 
   /**
@@ -4925,23 +4925,16 @@ export class MainClient extends BaseRestClient {
   getBrokerSubAccountDepositHistory(
     params?: GetBrokerSubAccountDepositHistoryParams,
   ): Promise<SubAccountDepositHistoryList[]> {
-    return this.getPrivate('sapi/v1/broker/subAccount/depositHist', params);
+    return this.getPrivate('sapi/v1/bv1/apiReferral/ifNewUser', params);
   }
 
   /**
    * @deprecated, found only in old docs
    * Use EXCHANGE LINK endpoints instead
    **/
-  getBrokerUserCustomisedId(
-    ...[market, params]:
-      | [market: 'spot', params: { apiAgentCode: string }]
-      | [market: 'futures', params: { brokerId: string }]
-  ) {
+  getBrokerUserCustomisedId(market: 'spot' | 'futures') {
     const prefix = market === 'spot' ? 'sapi' : 'fapi';
-    return this.getPrivate(
-      prefix + '/v1/apiReferral/userCustomization',
-      params,
-    );
+    return this.getPrivate(prefix + '/v1/apiReferral/userCustomization');
   }
 
   /**
@@ -4951,7 +4944,7 @@ export class MainClient extends BaseRestClient {
   enableFuturesBrokerSubAccount(
     params: EnableFuturesBrokerSubAccountParams,
   ): Promise<EnableFuturesBrokerSubAccountResponse> {
-    return this.postPrivate('sapi/v1/broker/subAccount/futures', params);
+    return this.postPrivate('sapi/v1/broker/subAccount', params);
   }
 
   /**
