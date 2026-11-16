@@ -3518,6 +3518,15 @@ High level summary for some of the available examples, but check the folder for 
 - `rest-usdm-order-sl.ts` Modifies a Hedge Mode LONG stop-loss order using Algo Service orders.
 
 ================
+File: examples/Rest/Futures/rest-future-bracket-order.ts
+================
+import {
+  FuturesNewAlgoOrderParams,
+  NewFuturesOrderParams,
+  USDMClient,
+} from '../../../src/index';
+
+================
 File: src/types/websockets/ws-api.ts
 ================
 import { WS_KEY_MAP, WsKey } from '../../util/websockets/websocket-util';
@@ -3917,7 +3926,9 @@ export interface WsAPITopicRequestParamMap<TWSKey = WsKey> {
   'userDataStream.start': { apiKey: string };
   'userDataStream.ping': WSAPIUserDataListenKeyRequest;
   'userDataStream.stop': WSAPIUserDataListenKeyRequest;
-  'userDataStream.subscribe': void;
+  'userDataStream.subscribe': void | {
+    filter?: { e?: string[]; s?: string[]; a?: string[]; x?: string[] };
+  };
   'userDataStream.subscribe.signature': { timestamp: number };
   'userDataStream.unsubscribe': void;
 
@@ -4185,15 +4196,6 @@ export interface WsAPIOperationResponseMap {
 /**
    * SOR responses
    */
-
-================
-File: examples/Rest/Futures/rest-future-bracket-order.ts
-================
-import {
-  FuturesNewAlgoOrderParams,
-  NewFuturesOrderParams,
-  USDMClient,
-} from '../../../src/index';
 
 ================
 File: src/websocket-api-client.ts
@@ -5250,765 +5252,9 @@ private handleWSReconnectedEvent(params: { wsKey: WsKey })
 // Queue resubscribe workflow
 
 ================
-File: src/websocket-client-legacy.ts
-================
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
-import { EventEmitter } from 'events';
-import WebSocket from 'isomorphic-ws';
-⋮----
-import { KlineInterval } from './types/shared';
-import {
-  WsFormattedMessage,
-  WsUserDataEvents,
-} from './types/websockets/ws-events-formatted';
-import { WsRawMessage } from './types/websockets/ws-events-raw';
-import {
-  WebsocketClientOptions,
-  WSClientConfigurableOptions,
-  WsMarket,
-  WsResponse,
-} from './types/websockets/ws-general';
-import Beautifier from './util/beautifier';
-import { DefaultLogger } from './util/logger';
-import { appendEventIfMissing, RestClientOptions } from './util/requestUtils';
-import { neverGuard } from './util/typeGuards';
-import { ListenKeyStateCache } from './util/websockets/listen-key-state-cache';
-import { RestClientCache } from './util/websockets/rest-client-cache';
-import {
-  appendEventMarket,
-  getContextFromWsKey,
-  getLegacyWsStoreKeyWithContext,
-  parseEventTypeFromMessage,
-  parseRawWsMessageLegacy,
-  safeTerminateWs,
-  WS_LOGGER_CATEGORY,
-  WsKey,
-} from './util/websockets/websocket-util';
-import { WsStore } from './util/websockets/WsStore';
-import { WsConnectionStateEnum } from './util/websockets/WsStore.types';
-⋮----
-alpha: '', // Legacy client: alpha not supported; use WebsocketClient for alpha streams
-⋮----
-type WsEventInternalSrc = 'event' | 'function';
-⋮----
-type WebSocketWithMetadata = WebSocket & {
-  onping?: (event: unknown) => void;
-  onpong?: (event: unknown) => void;
-  wsKey?: WsKey | string;
-};
-⋮----
-export declare interface WebsocketClientV1 {
-  on(event: 'reply', listener: (event: WsResponse) => void): this;
-
-  on(event: 'message', listener: (event: WsRawMessage) => void): this;
-
-  on(
-    event: 'formattedMessage',
-    listener: (event: WsFormattedMessage) => void,
-  ): this;
-
-  on(
-    event: 'formattedUserDataMessage',
-    listener: (event: WsUserDataEvents) => void,
-  ): this;
-
-  on(
-    event: 'error',
-    listener: (event: { wsKey: WsKey; error: any; rawEvent?: string }) => void,
-  ): this;
-
-  on(
-    event: 'open' | 'reconnected',
-    listener: (event: {
-      wsKey: WsKey;
-      ws: WebSocket.Event;
-      event?: any;
-    }) => void,
-  ): this;
-
-  on(
-    event: 'reconnecting' | 'close',
-    listener: (event: { wsKey: WsKey; ws: WebSocket; event?: any }) => void,
-  ): this;
-}
-⋮----
-on(event: 'reply', listener: (event: WsResponse)
-⋮----
-on(event: 'message', listener: (event: WsRawMessage)
-⋮----
-on(
-    event: 'formattedMessage',
-    listener: (event: WsFormattedMessage) => void,
-  ): this;
-⋮----
-on(
-    event: 'formattedUserDataMessage',
-    listener: (event: WsUserDataEvents) => void,
-  ): this;
-⋮----
-on(
-    event: 'error',
-    listener: (event: { wsKey: WsKey; error: any; rawEvent?: string }) => void,
-  ): this;
-⋮----
-on(
-    event: 'open' | 'reconnected',
-    listener: (event: {
-      wsKey: WsKey;
-      ws: WebSocket.Event;
-      event?: any;
-    }) => void,
-  ): this;
-⋮----
-on(
-    event: 'reconnecting' | 'close',
-    listener: (event: { wsKey: WsKey; ws: WebSocket; event?: any }) => void,
-  ): this;
-⋮----
-/**
- * @deprecated This legacy websocket client creates one websocket connection per topic.
- *
- * If subscribing to a lot of topics, consider using the new multiplex `WebsocketClient`.
- *
- * To split your topics into smaller groups (one connection per group), simply make multiple multiplex WebsocketClient instances.
- */
-export class WebsocketClientV1 extends EventEmitter
-⋮----
-constructor(
-    options: WSClientConfigurableOptions,
-    logger?: typeof DefaultLogger,
-  )
-⋮----
-// Some defaults:
-⋮----
-// Automatically send an authentication op/request after a connection opens, for private connections.
-⋮----
-// Individual requests require a signature
-⋮----
-// add default error handling so this doesn't crash node (if the user didn't set a handler)
-⋮----
-private getRestClientOptions(): RestClientOptions
-⋮----
-public connectToWsUrl(
-    url: string,
-    wsKey?: WsKey | string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-// Not sure these work in the browser, the traditional event listeners are required for ping/pong frames in node
-⋮----
-// Add ws connection with key to store
-⋮----
-public tryWsSend(wsKey: WsKey | string, wsMessage: string)
-⋮----
-public tryWsPing(wsKey: WsKey | string)
-⋮----
-// this.logger.trace(`Sending upstream ping: `, { ...loggerCategory, wsKey });
-⋮----
-// Binance allows unsolicited pongs, so we send both (though we expect a pong in response to our ping if the connection is still alive)
-⋮----
-private onWsOpen(ws: WebSocket.Event, wsKey: WsKey | string, wsUrl: string)
-⋮----
-private onWsClose(
-    event: any,
-    wsKey: WsKey | string,
-    ws: WebSocket,
-    wsUrl: string,
-  )
-⋮----
-// Clear any timers before we initiate revival
-⋮----
-// User data sockets include the listen key. To prevent accummulation in memory we should clean up old disconnected states
-⋮----
-private onWsMessage(
-    event: WebSocket.MessageEvent,
-    wsKey: WsKey | string,
-    source: WsEventInternalSrc,
-  )
-⋮----
-// Edge case where raw event does not include event type, detect using wsKey and mutate msg.e
-⋮----
-// Just closing the connection (with the last parameter as true) will handle cleanup and respawn
-⋮----
-// emit a separate event for user data messages
-⋮----
-private sendPing(wsKey: WsKey | string, wsUrl: string)
-⋮----
-private onWsPing(
-    event: any,
-    wsKey: WsKey | string,
-    ws: WebSocket,
-    source: WsEventInternalSrc,
-  )
-⋮----
-private onWsPong(
-    event: any,
-    wsKey: WsKey | string,
-    source: WsEventInternalSrc,
-  )
-⋮----
-/**
-   * Closes a connection, if it's even open. If open, this will trigger a reconnect asynchronously.
-   * If closed, trigger a reconnect immediately
-   */
-private executeReconnectableClose(
-    wsKey: WsKey | string,
-    reason: string,
-    wsUrl: string,
-  )
-⋮----
-public close(wsKey: WsKey | string, shouldReconnectAfterClose?: boolean)
-⋮----
-public closeAll(shouldReconnectAfterClose?: boolean)
-⋮----
-public closeWs(ws: WebSocket, shouldReconnectAfterClose?: boolean)
-⋮----
-private parseWsError(
-    context: string,
-    error: any,
-    wsKey: WsKey | string,
-    wsUrl: string,
-  )
-⋮----
-private reconnectWithDelay(
-    wsKey: WsKey | string,
-    connectionDelayMs: number,
-    wsUrl: string,
-  )
-⋮----
-// We'll set a new one once the new stream respawns, with a diff listenKey in the key
-⋮----
-private clearTimers(wsKey: WsKey | string)
-⋮----
-// Send a ping at intervals
-private clearPingTimer(wsKey: WsKey | string)
-⋮----
-// Expect a pong within a time limit
-private clearPongTimer(wsKey: WsKey | string)
-⋮----
-// Timer tracking that a reconnect is about to happen / in progress
-private clearReconnectTimer(wsKey: WsKey | string)
-⋮----
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-private getWsBaseUrl(market: WsMarket, wsKey?: WsKey | string): string
-⋮----
-public getWs(wsKey: WsKey | string): WebSocket | undefined
-⋮----
-private setWsState(wsKey: WsKey | string, state: WsConnectionStateEnum)
-⋮----
-/**
-   * Send WS message to subscribe to topics. Use subscribe() to call this.
-   */
-private requestSubscribeTopics(wsKey: WsKey | string, topics: string[])
-⋮----
-/**
-   * Send WS message to unsubscribe from topics. Use unsubscribe() to call this.
-   */
-private requestUnsubscribeTopics(wsKey: WsKey, topics: string[])
-⋮----
-/**
-   * Send WS message to unsubscribe from topics.
-   */
-public requestListSubscriptions(wsKey: WsKey, requestId: number)
-⋮----
-/**
-   * Send WS message to set property state
-   */
-public requestSetProperty(
-    wsKey: WsKey,
-    property: 'combined' | string,
-    value: any,
-    requestId: number,
-  )
-⋮----
-/**
-   * Send WS message to get property state
-   */
-public requestGetProperty(
-    wsKey: WsKey,
-    property: 'combined' | string,
-    requestId: number,
-  )
-⋮----
-/**
-   * --------------------------
-   * User data listen key tracking & persistence
-   * --------------------------
-   **/
-⋮----
-private setKeepAliveListenKeyTimer(
-    listenKey: string,
-    market: WsMarket,
-    ws: WebSocket,
-    wsKey: WsKey,
-    symbol?: string,
-    isTestnet?: boolean,
-  )
-⋮----
-// Set timer to keep WS alive every 50 minutes
-⋮----
-// 1000 * 60
-⋮----
-private sendKeepAliveForMarket(
-    listenKey: string,
-    market: WsMarket,
-    ws: WebSocket,
-    wsKey: WsKey,
-    symbol?: string,
-    isTestnet?: boolean,
-  )
-⋮----
-private async checkKeepAliveListenKey(
-    listenKey: string,
-    market: WsMarket,
-    ws: WebSocket,
-    wsKey: WsKey,
-    symbol?: string,
-    isTestnet?: boolean,
-  )
-⋮----
-// Simple way to test keep alive failure handling:
-// throw new Error(`Fake keep alive failure`);
-⋮----
-// code: -1125,
-// message: 'This listenKey does not exist.',
-⋮----
-// If max failurees reached, tear down and respawn if allowed
-⋮----
-// reconnect follows a less automatic workflow since this is tied to a listen key (which may need a new one).
-// Kill connection first, with instruction NOT to reconnect automatically
-⋮----
-// Then respawn a connection with a potentially new listen key (since the old one may be invalid now)
-⋮----
-private teardownUserDataListenKey(listenKey: string, ws?: WebSocket)
-⋮----
-private async respawnUserDataStream(
-    market: WsMarket,
-    symbol?: string,
-    isTestnet?: boolean,
-    respawnAttempt?: number,
-  ): Promise<void>
-⋮----
-// If another connection attempt is in progress for this listen key, don't initiate a retry or the risk is multiple connections on the same listen key
-⋮----
-// This timer should probably be tracked/singleton
-⋮----
-/**
-   * --------------------------
-   * Universal market websocket streams (may apply to one or more API markets)
-   * --------------------------
-   **/
-⋮----
-/**
-   * Subscribe to a universal market websocket stream
-   */
-⋮----
-public subscribeEndpoint(
-    endpoint: string,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to aggregate trades for a symbol in a market category
-   */
-public subscribeAggregateTrades(
-    symbol: string,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to trades for a symbol in a market category
-   * IMPORTANT: This topic for usdm and coinm is not listed in the api docs and might stop working without warning
-   */
-public subscribeTrades(
-    symbol: string,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to block trades for a symbol in spot markets.
-   */
-public subscribeBlockTrades(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to coin index for a symbol in COINM Futures markets
-   * `_updateSpeedMs` is ignored (`<pair>@indexPrice@1s` was removed). Drop this arg in the next major.
-   */
-public subscribeCoinIndexPrice(
-    symbol: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _updateSpeedMs: 1000 | 3000 = 3000,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-⋮----
-/**
-   * Subscribe to mark price for a symbol in a market category
-   */
-public subscribeMarkPrice(
-    symbol: string,
-    market: 'usdm' | 'coinm',
-    updateSpeedMs: 1000 | 3000 = 3000,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to mark price for all symbols in a market category
-   */
-public subscribeAllMarketMarkPrice(
-    market: 'usdm' | 'coinm',
-    updateSpeedMs: 1000 | 3000 = 3000,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to klines(candles) for a symbol in a market category
-   */
-public subscribeKlines(
-    symbol: string,
-    interval: KlineInterval,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to continuous contract klines(candles) for a symbol futures
-   */
-public subscribeContinuousContractKlines(
-    symbol: string,
-    contractType: 'perpetual' | 'current_quarter' | 'next_quarter',
-    interval: KlineInterval,
-    market: 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to index klines(candles) for a symbol in a coinm futures
-   */
-public subscribeIndexKlines(
-    symbol: string,
-    interval: KlineInterval,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to index klines(candles) for a symbol in a coinm futures
-   */
-public subscribeMarkPriceKlines(
-    symbol: string,
-    interval: KlineInterval,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to mini 24hr ticker for a symbol in market category.
-   */
-public subscribeSymbolMini24hrTicker(
-    symbol: string,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to mini 24hr mini ticker in market category.
-   */
-public subscribeAllMini24hrTickers(
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to 24hr ticker for a symbol in any market.
-   */
-public subscribeSymbol24hrTicker(
-    symbol: string,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to 24hr ticker in any market.
-   */
-public subscribeAll24hrTickers(
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to rolling window ticker statistics for all market symbols,
-   * computed over multiple windows. Note that only tickers that have
-   * changed will be present in the array.
-   *
-   * Notes:
-   * - Supported window sizes: 1h,4h,1d.
-   * - Supported markets: spot
-   */
-public subscribeAllRollingWindowTickers(
-    market: 'spot',
-    windowSize: '1h' | '4h' | '1d',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for symbol in spot markets.
-   */
-public subscribeSymbolBookTicker(
-    symbol: string,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for all symbols in spot markets.
-   */
-public subscribeAllBookTickers(
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for symbol in spot markets.
-   */
-public subscribeSymbolLiquidationOrders(
-    symbol: string,
-    market: 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for all symbols in spot markets.
-   */
-public subscribeAllLiquidationOrders(
-    market: 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to partial book depths (snapshots).
-   *
-   * Note:
-   * - spot only supports 1000ms or 100ms for updateMs
-   * - futures only support 100, 250 or 500ms for updateMs
-   *
-   * Use getContextFromWsKey(data.wsKey) to extract symbol from events
-   */
-public subscribePartialBookDepths(
-    symbol: string,
-    levels: 5 | 10 | 20,
-    updateMs: 100 | 250 | 500 | 1000,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to orderbook depth updates to locally manage an order book.
-   *
-   * Note that the updatems parameter depends on which market you're trading
-   *
-   * - Spot: https://binance-docs.github.io/apidocs/spot/en/#diff-depth-stream
-   * - USDM Futures: https://binance-docs.github.io/apidocs/futures/en/#diff-book-depth-streams
-   *
-   * Use getContextFromWsKey(data.wsKey) to extract symbol from events
-   */
-public subscribeDiffBookDepth(
-    symbol: string,
-    updateMs: 100 | 250 | 500 | 1000 = 100,
-    market: 'spot' | 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for all symbols in spot markets.
-   */
-public subscribeContractInfoStream(
-    market: 'usdm' | 'coinm',
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * --------------------------
-   * SPOT market websocket streams
-   * --------------------------
-   **/
-⋮----
-/**
-   * Subscribe to aggregate trades for a symbol in spot markets.
-   */
-public subscribeSpotAggregateTrades(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to trades for a symbol in spot markets.
-   */
-public subscribeSpotTrades(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to block trades for a symbol in spot markets.
-   */
-public subscribeSpotBlockTrades(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to candles for a symbol in spot markets.
-   */
-public subscribeSpotKline(
-    symbol: string,
-    interval: KlineInterval,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to mini 24hr ticker for a symbol in spot markets.
-   */
-public subscribeSpotSymbolMini24hrTicker(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to mini 24hr mini ticker in spot markets.
-   */
-public subscribeSpotAllMini24hrTickers(
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to 24hr ticker for a symbol in spot markets.
-   */
-public subscribeSpotSymbol24hrTicker(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to 24hr ticker in spot markets.
-   */
-public subscribeSpotAll24hrTickers(forceNewConnection?: boolean): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for symbol in spot markets.
-   */
-public subscribeSpotSymbolBookTicker(
-    symbol: string,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to best bid/ask for all symbols in spot markets.
-   */
-public subscribeSpotAllBookTickers(forceNewConnection?: boolean): WebSocket
-⋮----
-/**
-   * Subscribe to top bid/ask levels for symbol in spot markets.
-   */
-public subscribeSpotPartialBookDepth(
-    symbol: string,
-    levels: 5 | 10 | 20,
-    updateMs: 1000 | 100 = 1000,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to spot orderbook depth updates to locally manage an order book.
-   */
-public subscribeSpotDiffBookDepth(
-    symbol: string,
-    updateMs: 1000 | 100 = 1000,
-    forceNewConnection?: boolean,
-  ): WebSocket
-⋮----
-/**
-   * Subscribe to a spot user data stream. Use REST client to generate and persist listen key.
-   * Supports spot, margin & isolated margin listen keys.
-   */
-public subscribeSpotUserDataStreamWithListenKey(
-    listenKey: string,
-    forceNewConnection?: boolean,
-    isReconnecting?: boolean,
-  ): WebSocket | undefined
-⋮----
-// Start & store timer to keep alive listen key (and handle expiration)
-⋮----
-/**
-   * Subscribe to spot user data stream - listen key is automaticallyr generated. Calling multiple times only opens one connection.
-   */
-public async subscribeSpotUserDataStream(
-    forceNewConnection?: boolean,
-    isReconnecting?: boolean,
-  ): Promise<WebSocket | undefined>
-⋮----
-/**
-   * Subscribe to margin user data stream - listen key is automatically generated.
-   */
-public async subscribeMarginUserDataStream(
-    forceNewConnection?: boolean,
-    isReconnecting?: boolean,
-  ): Promise<WebSocket | undefined>
-⋮----
-// Start & store timer to keep alive listen key (and handle expiration)
-⋮----
-/**
-   * Subscribe to isolated margin user data stream - listen key is automatically generated.
-   */
-public async subscribeIsolatedMarginUserDataStream(
-    symbol: string,
-    forceNewConnection?: boolean,
-    isReconnecting?: boolean,
-  ): Promise<WebSocket | undefined>
-⋮----
-// Start & store timer to keep alive listen key (and handle expiration)
-⋮----
-/**
-   * --------------------------
-   * End of SPOT market websocket streams
-   * --------------------------
-   **/
-⋮----
-/**
-   * Subscribe to USD-M Futures user data stream - listen key is automatically generated.
-   */
-public async subscribeUsdFuturesUserDataStream(
-    isTestnet?: boolean,
-    forceNewConnection?: boolean,
-    isReconnecting?: boolean,
-  ): Promise<WebSocket | undefined>
-⋮----
-// Necessary so client knows this is a reconnect
-⋮----
-// Start & store timer to keep alive listen key (and handle expiration)
-⋮----
-/**
-   * Subscribe to COIN-M Futures user data stream - listen key is automatically generated.
-   */
-public async subscribeCoinFuturesUserDataStream(
-    isTestnet?: boolean,
-    forceNewConnection?: boolean,
-    isReconnecting?: boolean,
-  ): Promise<WebSocket | undefined>
-⋮----
-// Necessary so client knows this is a reconnect
-⋮----
-// Start & store timer to keep alive listen key (and handle expiration)
-
-================
 File: .nvmrc
 ================
-v24.18.0
+v24.22.3
 
 ================
 File: src/types/portfolio-margin.ts
@@ -7755,491 +7001,6 @@ expirationTimestamp: number; // The link would expire after this timestamp
 export interface PortfolioTradFiPerpsContractSignResponse {
   code: number;
   msg: string;
-}
-
-================
-File: src/types/shared.ts
-================
-// Generic numeric value stored as a string. Can be parsed via parseInt or parseFloat.
-// Beautifier may convert these to number, if enabled.
-export type numberInString = string | number;
-⋮----
-export type ExchangeSymbol = string;
-⋮----
-export type BooleanString = 'true' | 'false';
-⋮----
-export type BinanceBaseUrlKey =
-  | 'spot'
-  | 'spot1'
-  | 'spot2'
-  | 'spot3'
-  | 'spot4'
-  | 'spottest'
-  | 'usdmtest'
-  | 'usdm'
-  | 'coinm'
-  | 'coinmtest'
-  | 'voptions'
-  | 'voptionstest'
-  | 'papi'
-  | 'www';
-⋮----
-/**
- * Time in force. Note: `GTE_GTC` is not officially documented, use at your own risk.
- */
-export type OrderTimeInForce =
-  | 'GTC'
-  | 'IOC'
-  | 'FOK'
-  | 'GTX'
-  | 'GTE_GTC'
-  | 'GTD'
-  | 'RPI';
-⋮----
-export type StringBoolean = 'TRUE' | 'FALSE';
-⋮----
-export type SideEffects =
-  | 'MARGIN_BUY'
-  | 'AUTO_REPAY'
-  | 'NO_SIDE_EFFECT'
-  | 'AUTO_BORROW_REPAY'
-  | 'NO_SIDE_EFFECT';
-⋮----
-/**
- * ACK = confirmation of order acceptance (no placement/fill information)
- * RESULT = fill state
- * FULL = fill state + detail on fills and other detail
- */
-export type OrderResponseType = 'ACK' | 'RESULT' | 'FULL';
-⋮----
-export type OrderIdProperty =
-  | 'newClientOrderId'
-  | 'newClientStrategyId'
-  | 'listClientOrderId'
-  | 'limitClientOrderId'
-  | 'stopClientOrderId'
-  | 'clientAlgoId'
-  | 'aboveClientOrderId'
-  | 'belowClientOrderId'
-  | 'workingClientOrderId'
-  | 'pendingAboveClientOrderId'
-  | 'pendingBelowClientOrderId'
-  | 'pendingClientOrderId';
-⋮----
-export type OrderSide = 'BUY' | 'SELL';
-⋮----
-export type OrderStatus =
-  | 'NEW'
-  | 'PENDING_NEW'
-  | 'PARTIALLY_FILLED'
-  | 'FILLED'
-  | 'CANCELED'
-  | 'PENDING_CANCEL'
-  | 'REJECTED'
-  | 'EXPIRED'
-  | 'EXPIRED_IN_MATCH';
-⋮----
-export type OrderExecutionType =
-  | 'NEW'
-  | 'CANCELED'
-  | 'REJECTED'
-  | 'TRADE'
-  | 'EXPIRED';
-⋮----
-export type OrderListContingencyType =
-  | 'OCO'
-  | 'OTO'
-  | 'OTOCO'
-  | 'OPO'
-  | 'OPOCO';
-⋮----
-// listStatusType
-export type OCOStatus = 'RESPONSE' | 'EXEC_STARTED' | 'ALL_DONE';
-⋮----
-// listOrderStatus
-export type OCOOrderStatus = 'EXECUTING' | 'ALL_DONE' | 'REJECT';
-⋮----
-export type OrderType =
-  | 'LIMIT'
-  | 'LIMIT_MAKER'
-  | 'MARKET'
-  | 'STOP_LOSS'
-  | 'STOP_LOSS_LIMIT'
-  | 'TAKE_PROFIT'
-  | 'TAKE_PROFIT_LIMIT';
-⋮----
-export type OrderListOrderType =
-  | 'STOP_LOSS_LIMIT'
-  | 'STOP_LOSS'
-  | 'LIMIT_MAKER'
-  | 'TAKE_PROFIT'
-  | 'TAKE_PROFIT_LIMIT';
-⋮----
-export type SelfTradePreventionMode =
-  | 'EXPIRE_TAKER'
-  | 'EXPIRE_MAKER'
-  | 'EXPIRE_BOTH'
-  | 'NONE'
-  | 'DECREMENT'
-  | 'TRANSFER';
-⋮----
-export interface BasicAssetParam {
-  asset: string;
-}
-⋮----
-export interface BasicSymbolParam {
-  symbol: string;
-  isIsolated?: StringBoolean;
-}
-⋮----
-export interface SymbolArrayParam {
-  symbols: string[];
-}
-⋮----
-export interface BasicAssetPaginatedParams {
-  asset?: string;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-export interface BasicSymbolPaginatedParams {
-  symbol?: string;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface SymbolPrice {
-  symbol: string;
-  price: numberInString;
-  time?: number;
-}
-⋮----
-// used by spot and usdm
-export interface OrderBookParams {
-  symbol: string;
-  limit?: 5 | 10 | 20 | 50 | 100 | 500 | 1000 | 5000;
-  symbolStatus?: string;
-}
-⋮----
-export type KlineInterval =
-  | '1s'
-  | '1m'
-  | '3m'
-  | '5m'
-  | '15m'
-  | '30m'
-  | '1h'
-  | '2h'
-  | '4h'
-  | '6h'
-  | '8h'
-  | '12h'
-  | '1d'
-  | '3d'
-  | '1w'
-  | '1M';
-⋮----
-export interface GetOrderParams {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-}
-⋮----
-export interface GetOrderModifyHistoryParams {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface HistoricalTradesParams {
-  symbol: string;
-  limit?: number;
-  fromId?: number;
-}
-⋮----
-export interface KlinesParams {
-  symbol: string;
-  interval: KlineInterval;
-  startTime?: number;
-  endTime?: number;
-  timeZone?: string;
-  limit?: number;
-}
-⋮----
-export type Kline = [
-  number, // open time
-  numberInString, // open
-  numberInString, // high
-  numberInString, // low
-  numberInString, // close
-  numberInString, // volume
-  number, // close time
-  numberInString, // quote asset volume
-  number, // number of trades
-  numberInString, // taker buy base asset vol
-  numberInString, // taker buy quote asset vol
-  numberInString, // ignore?
-];
-⋮----
-number, // open time
-numberInString, // open
-numberInString, // high
-numberInString, // low
-numberInString, // close
-numberInString, // volume
-number, // close time
-numberInString, // quote asset volume
-number, // number of trades
-numberInString, // taker buy base asset vol
-numberInString, // taker buy quote asset vol
-numberInString, // ignore?
-⋮----
-/** @deprecated `FuturesKline` will be removed soon. Use `Kline` instead. **/
-export type FuturesKline = Kline;
-export interface RecentTradesParams {
-  symbol: string;
-  limit?: number;
-}
-⋮----
-export interface CancelOrderParams {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-}
-⋮----
-export interface AmendKeepPriorityParams {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  newClientOrderId?: string;
-  newQty: numberInString;
-}
-⋮----
-export interface CancelOCOParams {
-  symbol: string;
-  orderListId?: number;
-  listClientOrderId?: string;
-  newClientOrderId?: string;
-}
-⋮----
-export interface NewOCOParams {
-  symbol: string;
-  listClientOrderId?: string;
-  side: OrderSide;
-  quantity: number;
-  limitClientOrderId?: string;
-  limitStrategyId?: number;
-  limitStrategyType?: number;
-  price: number;
-  limitIcebergQty?: number;
-  trailingDelta?: number;
-  stopClientOrderId?: string;
-  stopPrice: number;
-  stopStrategyId?: number;
-  stopStrategyType?: number;
-  stopLimitPrice?: number;
-  stopIcebergQty?: number;
-  stopLimitTimeInForce?: OrderTimeInForce;
-  newOrderRespType?: OrderResponseType;
-  /** For isolated margin trading only */
-  isIsolated?: StringBoolean;
-  /** Define a side effect, only for margin trading */
-  sideEffectType?: SideEffects;
-}
-⋮----
-/** For isolated margin trading only */
-⋮----
-/** Define a side effect, only for margin trading */
-⋮----
-export interface NewOrderListParams<
-  T extends OrderResponseType = OrderResponseType,
-> {
-  symbol: string;
-  listClientOrderId?: string;
-  side: OrderSide;
-  quantity: number;
-  aboveType: OrderListOrderType;
-  aboveClientOrderId?: string;
-  aboveIcebergQty?: number;
-  abovePrice?: number;
-  aboveStopPrice?: number;
-  aboveTrailingDelta?: number;
-  aboveTimeInForce?: OrderTimeInForce;
-  aboveStrategyId?: number;
-  aboveStrategyType?: number;
-  belowType: OrderListOrderType;
-  belowClientOrderId?: string;
-  belowIcebergQty?: number;
-  belowPrice?: number;
-  belowStopPrice?: number;
-  belowTrailingDelta?: number;
-  belowTimeInForce?: OrderTimeInForce;
-  belowStrategyId?: number;
-  belowStrategyType?: number;
-  newOrderRespType?: T;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-}
-⋮----
-export interface SymbolFromPaginatedRequestFromId {
-  symbol: string;
-  fromId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface GetAllOrdersParams {
-  symbol: string;
-  orderId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface RateLimiter {
-  rateLimitType: 'REQUEST_WEIGHT' | 'ORDERS' | 'RAW_REQUESTS';
-  interval: 'SECOND' | 'MINUTE' | 'DAY';
-  intervalNum: number;
-  limit: number;
-}
-⋮----
-export interface SymbolPriceFilter {
-  filterType: 'PRICE_FILTER';
-  minPrice: numberInString;
-  maxPrice: numberInString;
-  tickSize: numberInString;
-}
-⋮----
-export interface SymbolPercentPriceFilter {
-  filterType: 'PERCENT_PRICE';
-  multiplierUp: numberInString;
-  multiplierDown: numberInString;
-  avgPriceMins: number;
-}
-⋮----
-export interface SymbolPercentPriceBySideFilter {
-  filterType: 'PERCENT_PRICE_BY_SIDE';
-  bidMultiplierUp: numberInString;
-  bidMultiplierDown: numberInString;
-  askMultiplierUp: numberInString;
-  askMultiplierDown: numberInString;
-  avgPriceMins: number;
-}
-⋮----
-export interface SymbolLegacyMinNotionalFilter {
-  filterType: 'MIN_NOTIONAL';
-  minNotional: numberInString;
-  applyToMarket: boolean;
-  avgPriceMins: number;
-}
-⋮----
-export interface SymbolLotSizeFilter {
-  filterType: 'LOT_SIZE';
-  minQty: numberInString;
-  maxQty: numberInString;
-  stepSize: numberInString;
-}
-⋮----
-export interface SymbolMinNotionalFilter {
-  filterType: 'NOTIONAL';
-  minNotional: numberInString;
-  applyMinToMarket: boolean;
-  maxNotional: numberInString;
-  applyMaxToMarket: boolean;
-  avgPriceMins: number;
-}
-⋮----
-export interface SymbolIcebergPartsFilter {
-  filterType: 'ICEBERG_PARTS';
-  limit: number;
-}
-⋮----
-export interface SymbolMarketLotSizeFilter {
-  filterType: 'MARKET_LOT_SIZE';
-  minQty: numberInString;
-  maxQty: numberInString;
-  stepSize: numberInString;
-}
-⋮----
-export interface SymbolMaxOrdersFilter {
-  filterType: 'MAX_NUM_ORDERS';
-  maxNumOrders: number;
-}
-⋮----
-export interface SymbolMaxAlgoOrdersFilter {
-  filterType: 'MAX_NUM_ALGO_ORDERS';
-  maxNumAlgoOrders: number;
-}
-⋮----
-export interface SymbolMaxIcebergOrdersFilter {
-  filterType: 'MAX_NUM_ICEBERG_ORDERS';
-  maxNumIcebergOrders: number;
-}
-⋮----
-export interface SymbolMaxPositionFilter {
-  filterType: 'MAX_POSITION';
-  maxPosition: numberInString;
-}
-⋮----
-export type SymbolFilter =
-  | SymbolPriceFilter
-  | SymbolPercentPriceFilter
-  | SymbolPercentPriceBySideFilter
-  | SymbolLegacyMinNotionalFilter
-  | SymbolLotSizeFilter
-  | SymbolMinNotionalFilter
-  | SymbolIcebergPartsFilter
-  | SymbolMarketLotSizeFilter
-  | SymbolMaxOrdersFilter
-  | SymbolMaxAlgoOrdersFilter
-  | SymbolMaxIcebergOrdersFilter
-  | SymbolMaxPositionFilter;
-⋮----
-export interface ExchangeMaxNumOrdersFilter {
-  filterType: 'EXCHANGE_MAX_NUM_ORDERS';
-  maxNumOrders: number;
-}
-⋮----
-export interface ExchangeMaxAlgoOrdersFilter {
-  filterType: 'EXCHANGE_MAX_ALGO_ORDERS';
-  maxNumAlgoOrders: number;
-}
-⋮----
-export type ExchangeFilter =
-  | ExchangeMaxNumOrdersFilter
-  | ExchangeMaxAlgoOrdersFilter;
-⋮----
-export type OrderBookPrice = numberInString;
-export type OrderBookAmount = numberInString;
-⋮----
-export type OrderBookRow = [OrderBookPrice, OrderBookAmount];
-⋮----
-export type OrderBookPriceFormatted = number;
-export type OrderBookAmountFormatted = number;
-export type OrderBookRowFormatted = [
-  OrderBookPriceFormatted,
-  OrderBookAmountFormatted,
-];
-⋮----
-export interface GenericCodeMsgError {
-  code: number;
-  msg: string;
-}
-⋮----
-export interface RowsWithTotal<T> {
-  rows: T[];
-  total: number;
-}
-⋮----
-export interface CoinStartEndLimit {
-  coin?: string;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
 }
 
 ================
@@ -10099,6 +8860,1275 @@ private validateOrderId(
   ): void
 
 ================
+File: src/websocket-client-legacy.ts
+================
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
+import { EventEmitter } from 'events';
+import WebSocket from 'isomorphic-ws';
+⋮----
+import { KlineInterval } from './types/shared';
+import {
+  WsFormattedMessage,
+  WsUserDataEvents,
+} from './types/websockets/ws-events-formatted';
+import { WsRawMessage } from './types/websockets/ws-events-raw';
+import {
+  WebsocketClientOptions,
+  WSClientConfigurableOptions,
+  WsMarket,
+  WsResponse,
+} from './types/websockets/ws-general';
+import Beautifier from './util/beautifier';
+import { DefaultLogger } from './util/logger';
+import { appendEventIfMissing, RestClientOptions } from './util/requestUtils';
+import { neverGuard } from './util/typeGuards';
+import { ListenKeyStateCache } from './util/websockets/listen-key-state-cache';
+import { RestClientCache } from './util/websockets/rest-client-cache';
+import {
+  appendEventMarket,
+  getContextFromWsKey,
+  getLegacyWsStoreKeyWithContext,
+  parseEventTypeFromMessage,
+  parseRawWsMessageLegacy,
+  safeTerminateWs,
+  WS_LOGGER_CATEGORY,
+  WsKey,
+} from './util/websockets/websocket-util';
+import { WsStore } from './util/websockets/WsStore';
+import { WsConnectionStateEnum } from './util/websockets/WsStore.types';
+⋮----
+alpha: '', // Legacy client: alpha not supported; use WebsocketClient for alpha streams
+⋮----
+type WsEventInternalSrc = 'event' | 'function';
+⋮----
+type WebSocketWithMetadata = WebSocket & {
+  onping?: (event: unknown) => void;
+  onpong?: (event: unknown) => void;
+  wsKey?: WsKey | string;
+};
+⋮----
+export declare interface WebsocketClientV1 {
+  on(event: 'reply', listener: (event: WsResponse) => void): this;
+
+  on(event: 'message', listener: (event: WsRawMessage) => void): this;
+
+  on(
+    event: 'formattedMessage',
+    listener: (event: WsFormattedMessage) => void,
+  ): this;
+
+  on(
+    event: 'formattedUserDataMessage',
+    listener: (event: WsUserDataEvents) => void,
+  ): this;
+
+  on(
+    event: 'error',
+    listener: (event: { wsKey: WsKey; error: any; rawEvent?: string }) => void,
+  ): this;
+
+  on(
+    event: 'open' | 'reconnected',
+    listener: (event: {
+      wsKey: WsKey;
+      ws: WebSocket.Event;
+      event?: any;
+    }) => void,
+  ): this;
+
+  on(
+    event: 'reconnecting' | 'close',
+    listener: (event: { wsKey: WsKey; ws: WebSocket; event?: any }) => void,
+  ): this;
+}
+⋮----
+on(event: 'reply', listener: (event: WsResponse)
+⋮----
+on(event: 'message', listener: (event: WsRawMessage)
+⋮----
+on(
+    event: 'formattedMessage',
+    listener: (event: WsFormattedMessage) => void,
+  ): this;
+⋮----
+on(
+    event: 'formattedUserDataMessage',
+    listener: (event: WsUserDataEvents) => void,
+  ): this;
+⋮----
+on(
+    event: 'error',
+    listener: (event: { wsKey: WsKey; error: any; rawEvent?: string }) => void,
+  ): this;
+⋮----
+on(
+    event: 'open' | 'reconnected',
+    listener: (event: {
+      wsKey: WsKey;
+      ws: WebSocket.Event;
+      event?: any;
+    }) => void,
+  ): this;
+⋮----
+on(
+    event: 'reconnecting' | 'close',
+    listener: (event: { wsKey: WsKey; ws: WebSocket; event?: any }) => void,
+  ): this;
+⋮----
+/**
+ * @deprecated This legacy websocket client creates one websocket connection per topic.
+ *
+ * If subscribing to a lot of topics, consider using the new multiplex `WebsocketClient`.
+ *
+ * To split your topics into smaller groups (one connection per group), simply make multiple multiplex WebsocketClient instances.
+ */
+export class WebsocketClientV1 extends EventEmitter
+⋮----
+constructor(
+    options: WSClientConfigurableOptions,
+    logger?: typeof DefaultLogger,
+  )
+⋮----
+// Some defaults:
+⋮----
+// Automatically send an authentication op/request after a connection opens, for private connections.
+⋮----
+// Individual requests require a signature
+⋮----
+// add default error handling so this doesn't crash node (if the user didn't set a handler)
+⋮----
+private getRestClientOptions(): RestClientOptions
+⋮----
+public connectToWsUrl(
+    url: string,
+    wsKey?: WsKey | string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+// Not sure these work in the browser, the traditional event listeners are required for ping/pong frames in node
+⋮----
+// Add ws connection with key to store
+⋮----
+public tryWsSend(wsKey: WsKey | string, wsMessage: string)
+⋮----
+public tryWsPing(wsKey: WsKey | string)
+⋮----
+// this.logger.trace(`Sending upstream ping: `, { ...loggerCategory, wsKey });
+⋮----
+// Binance allows unsolicited pongs, so we send both (though we expect a pong in response to our ping if the connection is still alive)
+⋮----
+private onWsOpen(ws: WebSocket.Event, wsKey: WsKey | string, wsUrl: string)
+⋮----
+private onWsClose(
+    event: any,
+    wsKey: WsKey | string,
+    ws: WebSocket,
+    wsUrl: string,
+  )
+⋮----
+// Clear any timers before we initiate revival
+⋮----
+// User data sockets include the listen key. To prevent accummulation in memory we should clean up old disconnected states
+⋮----
+private onWsMessage(
+    event: WebSocket.MessageEvent,
+    wsKey: WsKey | string,
+    source: WsEventInternalSrc,
+  )
+⋮----
+// Edge case where raw event does not include event type, detect using wsKey and mutate msg.e
+⋮----
+// Just closing the connection (with the last parameter as true) will handle cleanup and respawn
+⋮----
+// emit a separate event for user data messages
+⋮----
+private sendPing(wsKey: WsKey | string, wsUrl: string)
+⋮----
+private onWsPing(
+    event: any,
+    wsKey: WsKey | string,
+    ws: WebSocket,
+    source: WsEventInternalSrc,
+  )
+⋮----
+private onWsPong(
+    event: any,
+    wsKey: WsKey | string,
+    source: WsEventInternalSrc,
+  )
+⋮----
+/**
+   * Closes a connection, if it's even open. If open, this will trigger a reconnect asynchronously.
+   * If closed, trigger a reconnect immediately
+   */
+private executeReconnectableClose(
+    wsKey: WsKey | string,
+    reason: string,
+    wsUrl: string,
+  )
+⋮----
+public close(wsKey: WsKey | string, shouldReconnectAfterClose?: boolean)
+⋮----
+public closeAll(shouldReconnectAfterClose?: boolean)
+⋮----
+public closeWs(ws: WebSocket, shouldReconnectAfterClose?: boolean)
+⋮----
+private parseWsError(
+    context: string,
+    error: any,
+    wsKey: WsKey | string,
+    wsUrl: string,
+  )
+⋮----
+private reconnectWithDelay(
+    wsKey: WsKey | string,
+    connectionDelayMs: number,
+    wsUrl: string,
+  )
+⋮----
+// We'll set a new one once the new stream respawns, with a diff listenKey in the key
+⋮----
+private clearTimers(wsKey: WsKey | string)
+⋮----
+// Send a ping at intervals
+private clearPingTimer(wsKey: WsKey | string)
+⋮----
+// Expect a pong within a time limit
+private clearPongTimer(wsKey: WsKey | string)
+⋮----
+// Timer tracking that a reconnect is about to happen / in progress
+private clearReconnectTimer(wsKey: WsKey | string)
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+private getWsBaseUrl(market: WsMarket, wsKey?: WsKey | string): string
+⋮----
+public getWs(wsKey: WsKey | string): WebSocket | undefined
+⋮----
+private setWsState(wsKey: WsKey | string, state: WsConnectionStateEnum)
+⋮----
+/**
+   * Send WS message to subscribe to topics. Use subscribe() to call this.
+   */
+private requestSubscribeTopics(wsKey: WsKey | string, topics: string[])
+⋮----
+/**
+   * Send WS message to unsubscribe from topics. Use unsubscribe() to call this.
+   */
+private requestUnsubscribeTopics(wsKey: WsKey, topics: string[])
+⋮----
+/**
+   * Send WS message to unsubscribe from topics.
+   */
+public requestListSubscriptions(wsKey: WsKey, requestId: number)
+⋮----
+/**
+   * Send WS message to set property state
+   */
+public requestSetProperty(
+    wsKey: WsKey,
+    property: 'combined' | string,
+    value: any,
+    requestId: number,
+  )
+⋮----
+/**
+   * Send WS message to get property state
+   */
+public requestGetProperty(
+    wsKey: WsKey,
+    property: 'combined' | string,
+    requestId: number,
+  )
+⋮----
+/**
+   * --------------------------
+   * User data listen key tracking & persistence
+   * --------------------------
+   **/
+⋮----
+private setKeepAliveListenKeyTimer(
+    listenKey: string,
+    market: WsMarket,
+    ws: WebSocket,
+    wsKey: WsKey,
+    symbol?: string,
+    isTestnet?: boolean,
+  )
+⋮----
+// Set timer to keep WS alive every 50 minutes
+⋮----
+// 1000 * 60
+⋮----
+private sendKeepAliveForMarket(
+    listenKey: string,
+    market: WsMarket,
+    ws: WebSocket,
+    wsKey: WsKey,
+    symbol?: string,
+    isTestnet?: boolean,
+  )
+⋮----
+private async checkKeepAliveListenKey(
+    listenKey: string,
+    market: WsMarket,
+    ws: WebSocket,
+    wsKey: WsKey,
+    symbol?: string,
+    isTestnet?: boolean,
+  )
+⋮----
+// Simple way to test keep alive failure handling:
+// throw new Error(`Fake keep alive failure`);
+⋮----
+// code: -1125,
+// message: 'This listenKey does not exist.',
+⋮----
+// If max failurees reached, tear down and respawn if allowed
+⋮----
+// reconnect follows a less automatic workflow since this is tied to a listen key (which may need a new one).
+// Kill connection first, with instruction NOT to reconnect automatically
+⋮----
+// Then respawn a connection with a potentially new listen key (since the old one may be invalid now)
+⋮----
+private teardownUserDataListenKey(listenKey: string, ws?: WebSocket)
+⋮----
+private async respawnUserDataStream(
+    market: WsMarket,
+    symbol?: string,
+    isTestnet?: boolean,
+    respawnAttempt?: number,
+  ): Promise<void>
+⋮----
+// If another connection attempt is in progress for this listen key, don't initiate a retry or the risk is multiple connections on the same listen key
+⋮----
+// This timer should probably be tracked/singleton
+⋮----
+/**
+   * --------------------------
+   * Universal market websocket streams (may apply to one or more API markets)
+   * --------------------------
+   **/
+⋮----
+/**
+   * Subscribe to a universal market websocket stream
+   */
+⋮----
+public subscribeEndpoint(
+    endpoint: string,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to aggregate trades for a symbol in a market category
+   */
+public subscribeAggregateTrades(
+    symbol: string,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to trades for a symbol in a market category
+   * IMPORTANT: This topic for usdm and coinm is not listed in the api docs and might stop working without warning
+   */
+public subscribeTrades(
+    symbol: string,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to block trades for a symbol in spot markets.
+   */
+public subscribeBlockTrades(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to coin index for a symbol in COINM Futures markets
+   * `_updateSpeedMs` is ignored (`<pair>@indexPrice@1s` was removed). Drop this arg in the next major.
+   */
+public subscribeCoinIndexPrice(
+    symbol: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _updateSpeedMs: 1000 | 3000 = 3000,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+⋮----
+/**
+   * Subscribe to mark price for a symbol in a market category
+   */
+public subscribeMarkPrice(
+    symbol: string,
+    market: 'usdm' | 'coinm',
+    updateSpeedMs: 1000 | 3000 = 3000,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to mark price for all symbols in a market category
+   */
+public subscribeAllMarketMarkPrice(
+    market: 'usdm' | 'coinm',
+    updateSpeedMs: 1000 | 3000 = 3000,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to klines(candles) for a symbol in a market category
+   */
+public subscribeKlines(
+    symbol: string,
+    interval: KlineInterval,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to continuous contract klines(candles) for a symbol futures
+   */
+public subscribeContinuousContractKlines(
+    symbol: string,
+    contractType: 'perpetual' | 'current_quarter' | 'next_quarter',
+    interval: KlineInterval,
+    market: 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to index klines(candles) for a symbol in a coinm futures
+   */
+public subscribeIndexKlines(
+    symbol: string,
+    interval: KlineInterval,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to index klines(candles) for a symbol in a coinm futures
+   */
+public subscribeMarkPriceKlines(
+    symbol: string,
+    interval: KlineInterval,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to mini 24hr ticker for a symbol in market category.
+   */
+public subscribeSymbolMini24hrTicker(
+    symbol: string,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to mini 24hr mini ticker in market category.
+   */
+public subscribeAllMini24hrTickers(
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to 24hr ticker for a symbol in any market.
+   */
+public subscribeSymbol24hrTicker(
+    symbol: string,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to 24hr ticker in any market.
+   */
+public subscribeAll24hrTickers(
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to rolling window ticker statistics for all market symbols,
+   * computed over multiple windows. Note that only tickers that have
+   * changed will be present in the array.
+   *
+   * Notes:
+   * - Supported window sizes: 1h,4h,1d.
+   * - Supported markets: spot
+   */
+public subscribeAllRollingWindowTickers(
+    market: 'spot',
+    windowSize: '1h' | '4h' | '1d',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for symbol in spot markets.
+   */
+public subscribeSymbolBookTicker(
+    symbol: string,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for all symbols in spot markets.
+   */
+public subscribeAllBookTickers(
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for symbol in spot markets.
+   */
+public subscribeSymbolLiquidationOrders(
+    symbol: string,
+    market: 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for all symbols in spot markets.
+   */
+public subscribeAllLiquidationOrders(
+    market: 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to partial book depths (snapshots).
+   *
+   * Note:
+   * - spot only supports 1000ms or 100ms for updateMs
+   * - futures only support 100, 250 or 500ms for updateMs
+   *
+   * Use getContextFromWsKey(data.wsKey) to extract symbol from events
+   */
+public subscribePartialBookDepths(
+    symbol: string,
+    levels: 5 | 10 | 20,
+    updateMs: 100 | 250 | 500 | 1000,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to orderbook depth updates to locally manage an order book.
+   *
+   * Note that the updatems parameter depends on which market you're trading
+   *
+   * - Spot: https://binance-docs.github.io/apidocs/spot/en/#diff-depth-stream
+   * - USDM Futures: https://binance-docs.github.io/apidocs/futures/en/#diff-book-depth-streams
+   *
+   * Use getContextFromWsKey(data.wsKey) to extract symbol from events
+   */
+public subscribeDiffBookDepth(
+    symbol: string,
+    updateMs: 100 | 250 | 500 | 1000 = 100,
+    market: 'spot' | 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for all symbols in spot markets.
+   */
+public subscribeContractInfoStream(
+    market: 'usdm' | 'coinm',
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * --------------------------
+   * SPOT market websocket streams
+   * --------------------------
+   **/
+⋮----
+/**
+   * Subscribe to aggregate trades for a symbol in spot markets.
+   */
+public subscribeSpotAggregateTrades(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to trades for a symbol in spot markets.
+   */
+public subscribeSpotTrades(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to block trades for a symbol in spot markets.
+   */
+public subscribeSpotBlockTrades(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to candles for a symbol in spot markets.
+   */
+public subscribeSpotKline(
+    symbol: string,
+    interval: KlineInterval,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to mini 24hr ticker for a symbol in spot markets.
+   */
+public subscribeSpotSymbolMini24hrTicker(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to mini 24hr mini ticker in spot markets.
+   */
+public subscribeSpotAllMini24hrTickers(
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to 24hr ticker for a symbol in spot markets.
+   */
+public subscribeSpotSymbol24hrTicker(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to 24hr ticker in spot markets.
+   */
+public subscribeSpotAll24hrTickers(forceNewConnection?: boolean): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for symbol in spot markets.
+   */
+public subscribeSpotSymbolBookTicker(
+    symbol: string,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to best bid/ask for all symbols in spot markets.
+   */
+public subscribeSpotAllBookTickers(forceNewConnection?: boolean): WebSocket
+⋮----
+/**
+   * Subscribe to top bid/ask levels for symbol in spot markets.
+   */
+public subscribeSpotPartialBookDepth(
+    symbol: string,
+    levels: 5 | 10 | 20,
+    updateMs: 1000 | 100 = 1000,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to spot orderbook depth updates to locally manage an order book.
+   */
+public subscribeSpotDiffBookDepth(
+    symbol: string,
+    updateMs: 1000 | 100 = 1000,
+    forceNewConnection?: boolean,
+  ): WebSocket
+⋮----
+/**
+   * Subscribe to a spot user data stream. Use REST client to generate and persist listen key.
+   * Supports spot, margin & isolated margin listen keys.
+   */
+public subscribeSpotUserDataStreamWithListenKey(
+    listenKey: string,
+    forceNewConnection?: boolean,
+    isReconnecting?: boolean,
+  ): WebSocket | undefined
+⋮----
+// Start & store timer to keep alive listen key (and handle expiration)
+⋮----
+/**
+   * Subscribe to spot user data stream - listen key is automaticallyr generated. Calling multiple times only opens one connection.
+   */
+public async subscribeSpotUserDataStream(
+    forceNewConnection?: boolean,
+    isReconnecting?: boolean,
+  ): Promise<WebSocket | undefined>
+⋮----
+/**
+   * Subscribe to margin user data stream - listen key is automatically generated.
+   */
+public async subscribeMarginUserDataStream(
+    forceNewConnection?: boolean,
+    isReconnecting?: boolean,
+  ): Promise<WebSocket | undefined>
+⋮----
+// Start & store timer to keep alive listen key (and handle expiration)
+⋮----
+/**
+   * Subscribe to isolated margin user data stream - listen key is automatically generated.
+   */
+public async subscribeIsolatedMarginUserDataStream(
+    symbol: string,
+    forceNewConnection?: boolean,
+    isReconnecting?: boolean,
+  ): Promise<WebSocket | undefined>
+⋮----
+// Start & store timer to keep alive listen key (and handle expiration)
+⋮----
+/**
+   * --------------------------
+   * End of SPOT market websocket streams
+   * --------------------------
+   **/
+⋮----
+/**
+   * Subscribe to USD-M Futures user data stream - listen key is automatically generated.
+   */
+public async subscribeUsdFuturesUserDataStream(
+    isTestnet?: boolean,
+    forceNewConnection?: boolean,
+    isReconnecting?: boolean,
+  ): Promise<WebSocket | undefined>
+⋮----
+// Necessary so client knows this is a reconnect
+⋮----
+// Start & store timer to keep alive listen key (and handle expiration)
+⋮----
+/**
+   * Subscribe to COIN-M Futures user data stream - listen key is automatically generated.
+   */
+public async subscribeCoinFuturesUserDataStream(
+    isTestnet?: boolean,
+    forceNewConnection?: boolean,
+    isReconnecting?: boolean,
+  ): Promise<WebSocket | undefined>
+⋮----
+// Necessary so client knows this is a reconnect
+⋮----
+// Start & store timer to keep alive listen key (and handle expiration)
+
+================
+File: src/types/shared.ts
+================
+// Generic numeric value stored as a string. Can be parsed via parseInt or parseFloat.
+// Beautifier may convert these to number, if enabled.
+export type numberInString = string | number;
+⋮----
+export type ExchangeSymbol = string;
+⋮----
+export type BooleanString = 'true' | 'false';
+⋮----
+export type BinanceBaseUrlKey =
+  | 'spot'
+  | 'spot1'
+  | 'spot2'
+  | 'spot3'
+  | 'spot4'
+  | 'spottest'
+  | 'usdmtest'
+  | 'usdm'
+  | 'coinm'
+  | 'coinmtest'
+  | 'voptions'
+  | 'voptionstest'
+  | 'papi'
+  | 'www';
+⋮----
+/**
+ * Time in force. Note: `GTE_GTC` is not officially documented, use at your own risk.
+ */
+export type OrderTimeInForce =
+  | 'GTC'
+  | 'IOC'
+  | 'FOK'
+  | 'GTX'
+  | 'GTE_GTC'
+  | 'GTD'
+  | 'RPI';
+⋮----
+export type StringBoolean = 'TRUE' | 'FALSE';
+⋮----
+export type SideEffects =
+  | 'MARGIN_BUY'
+  | 'AUTO_REPAY'
+  | 'NO_SIDE_EFFECT'
+  | 'AUTO_BORROW_REPAY'
+  | 'NO_SIDE_EFFECT';
+⋮----
+/**
+ * ACK = confirmation of order acceptance (no placement/fill information)
+ * RESULT = fill state
+ * FULL = fill state + detail on fills and other detail
+ */
+export type OrderResponseType = 'ACK' | 'RESULT' | 'FULL';
+⋮----
+export type OrderIdProperty =
+  | 'newClientOrderId'
+  | 'newClientStrategyId'
+  | 'listClientOrderId'
+  | 'limitClientOrderId'
+  | 'stopClientOrderId'
+  | 'clientAlgoId'
+  | 'aboveClientOrderId'
+  | 'belowClientOrderId'
+  | 'workingClientOrderId'
+  | 'pendingAboveClientOrderId'
+  | 'pendingBelowClientOrderId'
+  | 'pendingClientOrderId';
+⋮----
+export type OrderSide = 'BUY' | 'SELL';
+⋮----
+export type OrderStatus =
+  | 'NEW'
+  | 'PENDING_NEW'
+  | 'PARTIALLY_FILLED'
+  | 'FILLED'
+  | 'CANCELED'
+  | 'PENDING_CANCEL'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'EXPIRED_IN_MATCH';
+⋮----
+export type OrderExecutionType =
+  | 'NEW'
+  | 'CANCELED'
+  | 'REJECTED'
+  | 'TRADE'
+  | 'EXPIRED';
+⋮----
+export type OrderListContingencyType =
+  | 'OCO'
+  | 'OTO'
+  | 'OTOCO'
+  | 'OPO'
+  | 'OPOCO';
+⋮----
+// listStatusType
+export type OCOStatus = 'RESPONSE' | 'EXEC_STARTED' | 'ALL_DONE';
+⋮----
+// listOrderStatus
+export type OCOOrderStatus = 'EXECUTING' | 'ALL_DONE' | 'REJECT';
+⋮----
+export type OrderType =
+  | 'LIMIT'
+  | 'LIMIT_MAKER'
+  | 'MARKET'
+  | 'STOP_LOSS'
+  | 'STOP_LOSS_LIMIT'
+  | 'TAKE_PROFIT'
+  | 'TAKE_PROFIT_LIMIT';
+⋮----
+export type OrderListOrderType =
+  | 'STOP_LOSS_LIMIT'
+  | 'STOP_LOSS'
+  | 'LIMIT_MAKER'
+  | 'TAKE_PROFIT'
+  | 'TAKE_PROFIT_LIMIT';
+⋮----
+export type SelfTradePreventionMode =
+  | 'EXPIRE_TAKER'
+  | 'EXPIRE_MAKER'
+  | 'EXPIRE_BOTH'
+  | 'NONE'
+  | 'DECREMENT'
+  | 'TRANSFER';
+⋮----
+/** Spot expiry reasons. Unknown strings remain supported for forward compatibility. */
+export type SpotExpiryReason =
+  | 'NONE'
+  | 'REJECTED'
+  | 'EXCHANGE_CANCELED'
+  | 'OCO_TRIGGER'
+  | 'OTO_PHASE_ONE_EXPIRED'
+  | 'UNFILLED_IOC_QUANTITY_EXPIRED'
+  | 'UNFILLED_FOK_ORDER_EXPIRED'
+  | 'INSUFFICIENT_LIQUIDITY'
+  | 'EXECUTION_RULE_PRICE_RANGE_EXCEEDED'
+  | 'EXHAUSTED'
+  | 'INSUFFICIENT_QUOTE_NOTIONAL_LIMIT'
+  | (string & Record<never, never>);
+⋮----
+export type SpotEffectiveSelfTradePreventionMode =
+  | 'EXPIRE_MAKER'
+  | 'EXPIRE_BOTH'
+  | 'DECREMENT';
+⋮----
+export interface BasicAssetParam {
+  asset: string;
+}
+⋮----
+export interface BasicSymbolParam {
+  symbol: string;
+  isIsolated?: StringBoolean;
+}
+⋮----
+export interface SymbolArrayParam {
+  symbols: string[];
+}
+⋮----
+export interface BasicAssetPaginatedParams {
+  asset?: string;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+export interface BasicSymbolPaginatedParams {
+  symbol?: string;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface SymbolPrice {
+  symbol: string;
+  price: numberInString;
+  time?: number;
+}
+⋮----
+// used by spot and usdm
+export interface OrderBookParams {
+  symbol: string;
+  limit?: 5 | 10 | 20 | 50 | 100 | 500 | 1000 | 5000;
+  symbolStatus?: string;
+}
+⋮----
+export type KlineInterval =
+  | '1s'
+  | '1m'
+  | '3m'
+  | '5m'
+  | '15m'
+  | '30m'
+  | '1h'
+  | '2h'
+  | '4h'
+  | '6h'
+  | '8h'
+  | '12h'
+  | '1d'
+  | '3d'
+  | '1w'
+  | '1M';
+⋮----
+export interface GetOrderParams {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+}
+⋮----
+export interface GetOrderModifyHistoryParams {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface HistoricalTradesParams {
+  symbol: string;
+  limit?: number;
+  fromId?: number;
+}
+⋮----
+export interface KlinesParams {
+  symbol: string;
+  interval: KlineInterval;
+  startTime?: number;
+  endTime?: number;
+  timeZone?: string;
+  limit?: number;
+}
+⋮----
+export type Kline = [
+  number, // open time
+  numberInString, // open
+  numberInString, // high
+  numberInString, // low
+  numberInString, // close
+  numberInString, // volume
+  number, // close time
+  numberInString, // quote asset volume
+  number, // number of trades
+  numberInString, // taker buy base asset vol
+  numberInString, // taker buy quote asset vol
+  numberInString, // ignore?
+];
+⋮----
+number, // open time
+numberInString, // open
+numberInString, // high
+numberInString, // low
+numberInString, // close
+numberInString, // volume
+number, // close time
+numberInString, // quote asset volume
+number, // number of trades
+numberInString, // taker buy base asset vol
+numberInString, // taker buy quote asset vol
+numberInString, // ignore?
+⋮----
+/** @deprecated `FuturesKline` will be removed soon. Use `Kline` instead. **/
+export type FuturesKline = Kline;
+export interface RecentTradesParams {
+  symbol: string;
+  limit?: number;
+}
+⋮----
+export interface CancelOrderParams {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+}
+⋮----
+export interface AmendKeepPriorityParams {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  newClientOrderId?: string;
+  newQty: numberInString;
+}
+⋮----
+export interface CancelOCOParams {
+  symbol: string;
+  orderListId?: number;
+  listClientOrderId?: string;
+  newClientOrderId?: string;
+}
+⋮----
+export interface NewOCOParams {
+  symbol: string;
+  listClientOrderId?: string;
+  side: OrderSide;
+  quantity: number;
+  limitClientOrderId?: string;
+  limitStrategyId?: number;
+  limitStrategyType?: number;
+  price: number;
+  limitIcebergQty?: number;
+  trailingDelta?: number;
+  stopClientOrderId?: string;
+  stopPrice: number;
+  stopStrategyId?: number;
+  stopStrategyType?: number;
+  stopLimitPrice?: number;
+  stopIcebergQty?: number;
+  stopLimitTimeInForce?: OrderTimeInForce;
+  newOrderRespType?: OrderResponseType;
+  /** For isolated margin trading only */
+  isIsolated?: StringBoolean;
+  /** Define a side effect, only for margin trading */
+  sideEffectType?: SideEffects;
+}
+⋮----
+/** For isolated margin trading only */
+⋮----
+/** Define a side effect, only for margin trading */
+⋮----
+export interface NewOrderListParams<
+  T extends OrderResponseType = OrderResponseType,
+> {
+  symbol: string;
+  listClientOrderId?: string;
+  side: OrderSide;
+  quantity: number;
+  aboveType: OrderListOrderType;
+  aboveClientOrderId?: string;
+  aboveIcebergQty?: number;
+  abovePrice?: number;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  aboveQuoteNotionalLimit?: number;
+  aboveStopPrice?: number;
+  aboveTrailingDelta?: number;
+  aboveTimeInForce?: OrderTimeInForce;
+  aboveStrategyId?: number;
+  aboveStrategyType?: number;
+  belowType: OrderListOrderType;
+  belowClientOrderId?: string;
+  belowIcebergQty?: number;
+  belowPrice?: number;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  belowQuoteNotionalLimit?: number;
+  belowStopPrice?: number;
+  belowTrailingDelta?: number;
+  belowTimeInForce?: OrderTimeInForce;
+  belowStrategyId?: number;
+  belowStrategyType?: number;
+  newOrderRespType?: T;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface SymbolFromPaginatedRequestFromId {
+  symbol: string;
+  fromId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface GetAllOrdersParams {
+  symbol: string;
+  orderId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface RateLimiter {
+  rateLimitType: 'REQUEST_WEIGHT' | 'ORDERS' | 'RAW_REQUESTS';
+  interval: 'SECOND' | 'MINUTE' | 'DAY';
+  intervalNum: number;
+  limit: number;
+}
+⋮----
+export interface SymbolPriceFilter {
+  filterType: 'PRICE_FILTER';
+  minPrice: numberInString;
+  maxPrice: numberInString;
+  tickSize: numberInString;
+}
+⋮----
+export interface SymbolPercentPriceFilter {
+  filterType: 'PERCENT_PRICE';
+  multiplierUp: numberInString;
+  multiplierDown: numberInString;
+  avgPriceMins: number;
+}
+⋮----
+export interface SymbolPercentPriceBySideFilter {
+  filterType: 'PERCENT_PRICE_BY_SIDE';
+  bidMultiplierUp: numberInString;
+  bidMultiplierDown: numberInString;
+  askMultiplierUp: numberInString;
+  askMultiplierDown: numberInString;
+  avgPriceMins: number;
+}
+⋮----
+export interface SymbolLegacyMinNotionalFilter {
+  filterType: 'MIN_NOTIONAL';
+  minNotional: numberInString;
+  applyToMarket: boolean;
+  avgPriceMins: number;
+}
+⋮----
+export interface SymbolLotSizeFilter {
+  filterType: 'LOT_SIZE';
+  minQty: numberInString;
+  maxQty: numberInString;
+  stepSize: numberInString;
+}
+⋮----
+export interface SymbolMinNotionalFilter {
+  filterType: 'NOTIONAL';
+  minNotional: numberInString;
+  applyMinToMarket: boolean;
+  maxNotional: numberInString;
+  applyMaxToMarket: boolean;
+  avgPriceMins: number;
+}
+⋮----
+export interface SymbolIcebergPartsFilter {
+  filterType: 'ICEBERG_PARTS';
+  limit: number;
+}
+⋮----
+export interface SymbolMarketLotSizeFilter {
+  filterType: 'MARKET_LOT_SIZE';
+  minQty: numberInString;
+  maxQty: numberInString;
+  stepSize: numberInString;
+}
+⋮----
+export interface SymbolMaxOrdersFilter {
+  filterType: 'MAX_NUM_ORDERS';
+  maxNumOrders: number;
+}
+⋮----
+export interface SymbolMaxAlgoOrdersFilter {
+  filterType: 'MAX_NUM_ALGO_ORDERS';
+  maxNumAlgoOrders: number;
+}
+⋮----
+export interface SymbolMaxIcebergOrdersFilter {
+  filterType: 'MAX_NUM_ICEBERG_ORDERS';
+  maxNumIcebergOrders: number;
+}
+⋮----
+export interface SymbolMaxPositionFilter {
+  filterType: 'MAX_POSITION';
+  maxPosition: numberInString;
+}
+⋮----
+export type SymbolFilter =
+  | SymbolPriceFilter
+  | SymbolPercentPriceFilter
+  | SymbolPercentPriceBySideFilter
+  | SymbolLegacyMinNotionalFilter
+  | SymbolLotSizeFilter
+  | SymbolMinNotionalFilter
+  | SymbolIcebergPartsFilter
+  | SymbolMarketLotSizeFilter
+  | SymbolMaxOrdersFilter
+  | SymbolMaxAlgoOrdersFilter
+  | SymbolMaxIcebergOrdersFilter
+  | SymbolMaxPositionFilter;
+⋮----
+export interface ExchangeMaxNumOrdersFilter {
+  filterType: 'EXCHANGE_MAX_NUM_ORDERS';
+  maxNumOrders: number;
+}
+⋮----
+export interface ExchangeMaxAlgoOrdersFilter {
+  filterType: 'EXCHANGE_MAX_ALGO_ORDERS';
+  maxNumAlgoOrders: number;
+}
+⋮----
+export type ExchangeFilter =
+  | ExchangeMaxNumOrdersFilter
+  | ExchangeMaxAlgoOrdersFilter;
+⋮----
+export type OrderBookPrice = numberInString;
+export type OrderBookAmount = numberInString;
+⋮----
+export type OrderBookRow = [OrderBookPrice, OrderBookAmount];
+⋮----
+export type OrderBookPriceFormatted = number;
+export type OrderBookAmountFormatted = number;
+export type OrderBookRowFormatted = [
+  OrderBookPriceFormatted,
+  OrderBookAmountFormatted,
+];
+⋮----
+export interface GenericCodeMsgError {
+  code: number;
+  msg: string;
+}
+⋮----
+export interface RowsWithTotal<T> {
+  rows: T[];
+  total: number;
+}
+⋮----
+export interface CoinStartEndLimit {
+  coin?: string;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+
+================
 File: src/types/websockets/ws-api-responses.ts
 ================
 import type {
@@ -10114,8 +10144,13 @@ import {
   OrderSide,
   OrderTimeInForce,
   SelfTradePreventionMode,
+  SpotExpiryReason,
 } from '../shared';
-import { OrderResponse, SpotNewOrderConditionalFields } from '../spot';
+import {
+  OrderResponse,
+  SpotNewOrderConditionalFields,
+  SpotOrderPreventedMatch,
+} from '../spot';
 ⋮----
 /**
  * Error response type
@@ -10388,6 +10423,7 @@ export interface WSAPIRateLimit {
 }
 ⋮----
 export interface WSAPIOrder {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   orderId: number;
   orderListId: number;
@@ -10411,7 +10447,7 @@ export interface WSAPIOrder {
   preventedMatchId?: number;
   preventedQuantity?: numberInString;
   /** Present only for expired orders. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 ⋮----
 /** Present only for expired orders. */
@@ -10523,6 +10559,7 @@ export interface WSAPIOrderTestWithCommission {
      */
 ⋮----
 export interface WSAPIOrderCancel {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   origClientOrderId: string;
   orderId: number;
@@ -10602,7 +10639,7 @@ export interface WSAPIOrderListStatusResponse {
     orderId: number;
     clientOrderId: string;
     /** Present only for expired orders. */
-    expiryReason?: string;
+    expiryReason?: SpotExpiryReason;
   }[];
 }
 ⋮----
@@ -10612,6 +10649,7 @@ export interface WSAPIOrderListStatusResponse {
  * SOR response types
  */
 export interface WSAPISOROrderPlaceResponse {
+  preventedMatches?: SpotOrderPreventedMatch[];
   symbol: string;
   orderId: number;
   orderListId: number;
@@ -10628,7 +10666,7 @@ export interface WSAPISOROrderPlaceResponse {
   side: string;
   workingTime: number;
   /** With newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
   fills: {
     matchType: string;
     price: string;
@@ -10887,7 +10925,7 @@ export interface WSAPISpotOrderRESULT
   workingTime: number;
   selfTradePreventionMode: string;
   /** With newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 ⋮----
 /** With newOrderRespType RESULT or FULL when the order has an expiry reason. */
@@ -10902,6 +10940,7 @@ export interface WSAPISpotOrderFill {
 ⋮----
 export interface WSAPISpotOrderFULL extends WSAPISpotOrderRESULT {
   fills: WSAPISpotOrderFill[];
+  preventedMatches?: SpotOrderPreventedMatch[];
 }
 ⋮----
 export type WSAPISpotOrderResponse =
@@ -10936,6 +10975,8 @@ import {
   OrderTimeInForce,
   OrderType,
   SelfTradePreventionMode,
+  SpotEffectiveSelfTradePreventionMode,
+  SpotExpiryReason,
 } from '../shared';
 import {
   AccountUpdateEventType,
@@ -11210,7 +11251,10 @@ export interface WsMessageSpotUserDataExecutionReportEventFormatted
   orderQuoteQty: number;
   workingTime: number;
   selfTradePreventionMode: SelfTradePreventionMode;
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
+  /** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+  effectiveSelfTradePreventionMode?: SpotEffectiveSelfTradePreventionMode;
+  quoteNotionalLimit?: number;
   trailingDelta?: number;
   preventedMatchId?: number;
   trailingTime?: number;
@@ -11227,6 +11271,8 @@ export interface WsMessageSpotUserDataExecutionReportEventFormatted
   preventedExecutionPrice?: number;
   preventedExecutionQuoteQty?: number;
 }
+⋮----
+/** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
 ⋮----
 /** Allocation ID. */
 ⋮----
@@ -11246,7 +11292,11 @@ export interface WsMessagePortfolioMarginProAccountUpdateFormatted
 export interface WsMessageWsapiServerShutdownFormatted extends WsSharedBase {
   eventType: 'serverShutdown';
   eventTime: number;
+  /** Time when the WebSocket session will shut down. */
+  shutdownTime?: number;
 }
+⋮----
+/** Time when the WebSocket session will shut down. */
 ⋮----
 export interface OrderObjectFormatted {
   symbol: string;
@@ -11664,6 +11714,8 @@ import {
   OrderTimeInForce,
   OrderType,
   SelfTradePreventionMode,
+  SpotEffectiveSelfTradePreventionMode,
+  SpotExpiryReason,
 } from '../shared';
 import { WsSharedBase } from './ws-general';
 ⋮----
@@ -11897,7 +11949,11 @@ export interface WsMessageSpotUserDataExecutionReportEventRaw
   W: number;
   V: SelfTradePreventionMode;
   /** Expiry reason when present (user data executionReport). */
-  eR?: string;
+  eR?: SpotExpiryReason;
+  /** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+  eV?: SpotEffectiveSelfTradePreventionMode;
+  /** Present only when the order has a quote notional limit. */
+  Qq?: numberInString;
   d?: number;
   v?: number;
   D?: number;
@@ -11917,6 +11973,10 @@ export interface WsMessageSpotUserDataExecutionReportEventRaw
 ⋮----
 /** Expiry reason when present (user data executionReport). */
 ⋮----
+/** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+⋮----
+/** Present only when the order has a quote notional limit. */
+⋮----
 /** Allocation ID. */
 ⋮----
 export interface WsMessagePortfolioMarginProAccountUpdateRaw
@@ -11935,7 +11995,11 @@ export interface WsMessagePortfolioMarginProAccountUpdateRaw
 export interface WsMessageWsapiServerShutdownRaw extends WsSharedBase {
   e: 'serverShutdown';
   E: number;
+  /** Time when the WebSocket session will shut down. */
+  T?: number;
 }
+⋮----
+/** Time when the WebSocket session will shut down. */
 ⋮----
 export interface OrderObjectRaw {
   s: string;
@@ -14327,766 +14391,6 @@ If you want to learn more about integrating with Binance APIs and WebSockets:
 - Explore the wider SDK ecosystem: [Siebly.io](https://siebly.io)
 
 ================
-File: src/types/websockets/ws-api-requests.ts
-================
-import {
-  FuturesAlgoConditionalOrderTypes,
-  FuturesAlgoOrderType,
-  FuturesOrderType,
-  PositionSide,
-  PriceMatchMode,
-  WorkingType,
-} from '../futures';
-import {
-  BooleanString,
-  KlineInterval,
-  numberInString,
-  OrderResponseType,
-  OrderSide,
-  OrderTimeInForce,
-  OrderType,
-  SelfTradePreventionMode,
-} from '../shared';
-⋮----
-/**
- * Simple request params with timestamp (required) & recv window (optional)
- */
-export type WSAPIRecvWindowTimestamp = {
-  recvWindow?: number;
-  timestamp: number;
-};
-⋮----
-/**
- *
- * Authentication request types
- *
- */
-export interface WSAPISessionLogonRequest {
-  timestamp: number;
-}
-⋮----
-/**
- *
- * General request types
- *
- */
-export interface WSAPIExchangeInfoRequest {
-  symbol?: string;
-  symbols?: string[];
-  permissions?: string[];
-  showPermissionSets?: boolean;
-  symbolStatus?: string;
-}
-⋮----
-/**
- *
- * Market data request types
- *
- */
-⋮----
-export interface WSAPIOrderBookRequest {
-  symbol: string;
-  limit?: number;
-  symbolStatus?: string;
-}
-⋮----
-export interface WSAPITradesRecentRequest {
-  symbol: string;
-  limit?: number;
-}
-⋮----
-export interface WSAPITradesHistoricalRequest {
-  symbol: string;
-  fromId?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIBlockTradesHistoricalRequest {
-  symbol: string;
-  fromId: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPITradesAggregateRequest {
-  symbol: string;
-  fromId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIKlinesRequest {
-  symbol: string;
-  interval: KlineInterval;
-  startTime?: number;
-  endTime?: number;
-  timeZone?: string;
-  limit?: number;
-}
-⋮----
-export interface WSAPIAvgPriceRequest {
-  symbol: string;
-}
-⋮----
-/**
- * Query execution rules (e.g. PRICE_RANGE). Only one of symbol, symbols, or symbolStatus per request.
- */
-export interface WSAPIExecutionRulesRequest {
-  symbol?: string;
-  symbols?: string[];
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
-}
-⋮----
-export interface WSAPIReferencePriceRequest {
-  symbol: string;
-}
-⋮----
-export interface WSAPIReferencePriceCalculationRequest {
-  symbol: string;
-  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITicker24hrRequest {
-  symbol?: string;
-  symbols?: string[];
-  type?: 'FULL' | 'MINI';
-  symbolStatus?: string;
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerTradingDayRequest {
-  symbol?: string;
-  symbols?: string[];
-  timeZone?: string;
-  type?: 'FULL' | 'MINI';
-  symbolStatus?: string;
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerRequest {
-  symbol?: string;
-  symbols?: string[];
-  windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
-  type?: 'FULL' | 'MINI';
-  symbolStatus?: string;
-}
-⋮----
-windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerPriceRequest {
-  symbol?: string;
-  symbols?: string[];
-  symbolStatus?: string;
-}
-⋮----
-/**
- * Symbol for single symbol, or symbols for multiple symbols
- */
-export interface WSAPITickerBookRequest {
-  symbol?: string;
-  symbols?: string[];
-  symbolStatus?: string;
-}
-⋮----
-/**
- *
- * Account request types - Spot
- *
- */
-⋮----
-export interface WSAPIAllOrdersRequest {
-  symbol: string;
-  orderId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIAllOrderListsRequest {
-  fromId?: number;
-  startTime?: number;
-  endTime?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIMyTradesRequest {
-  symbol: string;
-  orderId?: number;
-  startTime?: number;
-  endTime?: number;
-  fromId?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIMyPreventedMatchesRequest {
-  symbol: string;
-  preventedMatchId?: number;
-  orderId?: number;
-  fromPreventedMatchId?: number;
-  limit?: number;
-}
-⋮----
-export interface WSAPIMyAllocationsRequest {
-  symbol: string;
-  startTime?: number;
-  endTime?: number;
-  fromAllocationId?: number;
-  limit?: number;
-  orderId?: number;
-}
-⋮----
-/**
- * Trading request types
- */
-type SpotPegPriceType = 'PRIMARY_PEG' | 'MARKET_PEG';
-type SpotPegOffsetType = 'PRICE_LEVEL';
-⋮----
-export interface WSAPINewSpotOrderRequest {
-  symbol: string;
-  side: OrderSide;
-  type: OrderType;
-  timeInForce?: OrderTimeInForce;
-  price?: numberInString;
-  quantity?: numberInString;
-  quoteOrderQty?: numberInString;
-  newClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  pegPriceType?: SpotPegPriceType;
-  pegOffsetValue?: number;
-  pegOffsetType?: SpotPegOffsetType;
-}
-⋮----
-export interface WSAPIOrderTestRequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  type: string;
-  timeInForce?: string;
-  price?: numberInString;
-  quantity?: numberInString;
-  quoteOrderQty?: numberInString;
-  newClientOrderId?: string;
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  pegPriceType?: SpotPegPriceType;
-  pegOffsetValue?: number;
-  pegOffsetType?: SpotPegOffsetType;
-  computeCommissionRates?: boolean;
-  timestamp: number;
-  recvWindow?: number;
-}
-⋮----
-export interface WSAPIOrderStatusRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderCancelRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  newClientOrderId?: string;
-  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderCancelReplaceRequest {
-  symbol: string;
-  cancelReplaceMode: 'STOP_ON_FAILURE' | 'ALLOW_FAILURE';
-  cancelOrderId?: number;
-  cancelOrigClientOrderId?: string;
-  cancelNewClientOrderId?: string;
-  side: 'BUY' | 'SELL';
-  type: string;
-  timeInForce?: string;
-  price?: numberInString;
-  quantity?: numberInString;
-  quoteOrderQty?: numberInString;
-  newClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  pegPriceType?: SpotPegPriceType;
-  pegOffsetValue?: number;
-  pegOffsetType?: SpotPegOffsetType;
-  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
-  orderRateLimitExceededMode?: 'DO_NOTHING' | 'CANCEL_ONLY';
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderAmendKeepPriorityRequest {
-  symbol: string;
-  orderId?: number | string;
-  origClientOrderId?: string;
-  newClientOrderId?: string;
-  newQty?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOpenOrdersStatusRequest {
-  symbol?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOpenOrdersCancelAllRequest {
-  symbol: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-/**
- * Order list request types
- */
-export interface WSAPIOrderListPlaceRequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  price: numberInString;
-  quantity: numberInString;
-  listClientOrderId?: string;
-  limitClientOrderId?: string;
-  limitIcebergQty?: numberInString;
-  limitStrategyId?: number;
-  limitStrategyType?: number;
-  stopPrice?: numberInString;
-  trailingDelta?: number;
-  stopClientOrderId?: string;
-  stopLimitPrice?: numberInString;
-  stopLimitTimeInForce?: string;
-  stopIcebergQty?: numberInString;
-  stopStrategyId?: number;
-  stopStrategyType?: number;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOCORequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  quantity: numberInString;
-  listClientOrderId?: string;
-  aboveType:
-    | 'STOP_LOSS_LIMIT'
-    | 'STOP_LOSS'
-    | 'LIMIT_MAKER'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  aboveClientOrderId?: string;
-  aboveIcebergQty?: numberInString;
-  abovePrice?: numberInString;
-  aboveStopPrice?: numberInString;
-  aboveTrailingDelta?: number;
-  aboveTimeInForce?: string;
-  aboveStrategyId?: number;
-  aboveStrategyType?: number;
-  belowType:
-    | 'STOP_LOSS'
-    | 'STOP_LOSS_LIMIT'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT'
-    | 'LIMIT_MAKER';
-  belowClientOrderId?: string;
-  belowIcebergQty?: numberInString;
-  belowPrice?: numberInString;
-  belowStopPrice?: numberInString;
-  belowTrailingDelta?: number;
-  belowTimeInForce?: string;
-  belowStrategyId?: number;
-  belowStrategyType?: number;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOTORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  pendingType: string;
-  pendingSide: 'BUY' | 'SELL';
-  pendingClientOrderId?: string;
-  pendingPrice?: numberInString;
-  pendingStopPrice?: numberInString;
-  pendingTrailingDelta?: numberInString;
-  pendingQuantity: numberInString;
-  pendingIcebergQty?: numberInString;
-  pendingTimeInForce?: string;
-  pendingStrategyId?: number;
-  pendingStrategyType?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOTOCORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  pendingSide: 'BUY' | 'SELL';
-  pendingQuantity: number | string;
-  pendingAboveType:
-    | 'STOP_LOSS_LIMIT'
-    | 'STOP_LOSS'
-    | 'LIMIT_MAKER'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  pendingAboveClientOrderId?: string;
-  pendingAbovePrice?: numberInString;
-  pendingAboveStopPrice?: numberInString;
-  pendingAboveTrailingDelta?: numberInString;
-  pendingAboveIcebergQty?: numberInString;
-  pendingAboveTimeInForce?: string;
-  pendingAboveStrategyId?: number;
-  pendingAboveStrategyType?: number;
-  pendingBelowType:
-    | 'STOP_LOSS'
-    | 'STOP_LOSS_LIMIT'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT'
-    | 'LIMIT_MAKER';
-  pendingBelowClientOrderId?: string;
-  pendingBelowPrice?: numberInString;
-  pendingBelowStopPrice?: numberInString;
-  pendingBelowTrailingDelta?: numberInString;
-  pendingBelowIcebergQty?: numberInString;
-  pendingBelowTimeInForce?: string;
-  pendingBelowStrategyId?: number;
-  pendingBelowStrategyType?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOPORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  workingPegPriceType?: string;
-  workingPegOffsetType?: string;
-  workingPegOffsetValue?: number;
-  pendingType: string;
-  pendingSide: 'BUY' | 'SELL';
-  pendingClientOrderId?: string;
-  pendingPrice?: numberInString;
-  pendingStopPrice?: numberInString;
-  pendingTrailingDelta?: numberInString;
-  pendingIcebergQty?: numberInString;
-  pendingTimeInForce?: string;
-  pendingStrategyId?: number;
-  pendingStrategyType?: number;
-  pendingPegPriceType?: string;
-  pendingPegOffsetType?: string;
-  pendingPegOffsetValue?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListPlaceOPOCORequest {
-  symbol: string;
-  listClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  selfTradePreventionMode?: string;
-  workingType: 'LIMIT' | 'LIMIT_MAKER';
-  workingSide: 'BUY' | 'SELL';
-  workingClientOrderId?: string;
-  workingPrice: numberInString;
-  workingQuantity: numberInString;
-  workingIcebergQty?: numberInString;
-  workingTimeInForce?: string;
-  workingStrategyId?: number;
-  workingStrategyType?: number;
-  workingPegPriceType?: string;
-  workingPegOffsetType?: string;
-  workingPegOffsetValue?: number;
-  pendingSide: 'BUY' | 'SELL';
-  pendingAboveType:
-    | 'STOP_LOSS_LIMIT'
-    | 'STOP_LOSS'
-    | 'LIMIT_MAKER'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  pendingAboveClientOrderId?: string;
-  pendingAbovePrice?: numberInString;
-  pendingAboveStopPrice?: numberInString;
-  pendingAboveTrailingDelta?: numberInString;
-  pendingAboveIcebergQty?: numberInString;
-  pendingAboveTimeInForce?: string;
-  pendingAboveStrategyId?: number;
-  pendingAboveStrategyType?: number;
-  pendingAbovePegPriceType?: string;
-  pendingAbovePegOffsetType?: string;
-  pendingAbovePegOffsetValue?: number;
-  pendingBelowType?:
-    | 'STOP_LOSS'
-    | 'STOP_LOSS_LIMIT'
-    | 'TAKE_PROFIT'
-    | 'TAKE_PROFIT_LIMIT';
-  pendingBelowClientOrderId?: string;
-  pendingBelowPrice?: numberInString;
-  pendingBelowStopPrice?: numberInString;
-  pendingBelowTrailingDelta?: numberInString;
-  pendingBelowIcebergQty?: numberInString;
-  pendingBelowTimeInForce?: string;
-  pendingBelowStrategyId?: number;
-  pendingBelowStrategyType?: number;
-  pendingBelowPegPriceType?: string;
-  pendingBelowPegOffsetType?: string;
-  pendingBelowPegOffsetValue?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListStatusRequest {
-  origClientOrderId?: string;
-  orderListId?: number;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIOrderListCancelRequest {
-  symbol: string;
-  orderListId?: number;
-  listClientOrderId?: string;
-  newClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-/**
- * SOR request types
- */
-export interface WSAPISOROrderPlaceRequest {
-  symbol: string;
-  side: 'BUY' | 'SELL';
-  type: 'LIMIT' | 'MARKET';
-  timeInForce?: string;
-  price?: numberInString;
-  quantity: numberInString;
-  newClientOrderId?: string;
-  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
-  icebergQty?: numberInString;
-  strategyId?: number;
-  strategyType?: number;
-  selfTradePreventionMode?: string;
-  timestamp: number;
-  recvWindow?: number;
-}
-⋮----
-export type WSAPISOROrderTestRequest = WSAPISOROrderPlaceRequest & {
-  computeCommissionRates?: boolean;
-};
-⋮----
-/**
- * Futures market data request types
- */
-⋮----
-export interface WSAPIFuturesOrderBookRequest {
-  symbol: string;
-  limit?: number;
-}
-⋮----
-export interface WSAPIFuturesTickerPriceRequest {
-  symbol?: string;
-}
-⋮----
-export interface WSAPIFuturesTickerBookRequest {
-  symbol?: string;
-}
-⋮----
-/**
- * Futures trading request types
- */
-⋮----
-export interface WSAPINewFuturesOrderRequest<numberType = numberInString> {
-  symbol: string;
-  side: OrderSide;
-  positionSide?: PositionSide;
-  type: FuturesOrderType;
-  timeInForce?: OrderTimeInForce;
-  quantity?: numberType;
-  reduceOnly?: BooleanString;
-  price?: numberType;
-  newClientOrderId?: string;
-  stopPrice?: numberType;
-  closePosition?: BooleanString;
-  activationPrice?: numberType;
-  callbackRate?: numberType;
-  workingType?: WorkingType;
-  priceProtect?: BooleanString;
-  newOrderRespType?: 'ACK' | 'RESULT';
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  priceMatch?: PriceMatchMode;
-  goodTillDate?: number; // Mandatory when timeInForce is GTD
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-goodTillDate?: number; // Mandatory when timeInForce is GTD
-⋮----
-export interface WSAPIFuturesOrderModifyRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  side: 'BUY' | 'SELL';
-  quantity: numberInString;
-  price: numberInString;
-  priceMatch?:
-    | 'NONE'
-    | 'OPPONENT'
-    | 'OPPONENT_5'
-    | 'OPPONENT_10'
-    | 'OPPONENT_20'
-    | 'QUEUE'
-    | 'QUEUE_5'
-    | 'QUEUE_10'
-    | 'QUEUE_20';
-  origType?: string;
-  positionSide?: 'BOTH' | 'LONG' | 'SHORT';
-  modifyId?: number;
-  reduceOnly?: BooleanString;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesOrderCancelRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesOrderStatusRequest {
-  symbol: string;
-  orderId?: number;
-  origClientOrderId?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesPositionRequest {
-  symbol?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIFuturesPositionV2Request {
-  symbol?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIAccountInformationRequest {
-  omitZeroBalances?: boolean;
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-export interface WSAPIAccountCommissionWSAPIRequest {
-  symbol: string;
-}
-⋮----
-/**
- * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api
- */
-export interface WSAPINewFuturesAlgoOrderRequest<numberType = numberInString> {
-  algoType: FuturesAlgoOrderType;
-  symbol: string;
-  side: OrderSide;
-  positionSide?: PositionSide;
-  type: FuturesAlgoConditionalOrderTypes;
-  timeInForce?: OrderTimeInForce;
-  quantity?: numberType;
-  reduceOnly?: BooleanString;
-  price?: numberInString;
-  clientAlgoId?: string;
-  triggerPrice?: numberInString;
-  closePosition?: BooleanString;
-  activatePrice?: numberInString;
-  callbackRate?: numberInString;
-  workingType?: WorkingType;
-  priceProtect?: BooleanString;
-  newOrderRespType?: OrderResponseType;
-  priceMatch?: PriceMatchMode;
-  selfTradePreventionMode?: SelfTradePreventionMode;
-  goodTillDate?: number; // Mandatory when timeInForce is GTD
-  recvWindow?: number;
-  timestamp: number;
-}
-⋮----
-goodTillDate?: number; // Mandatory when timeInForce is GTD
-⋮----
-/**
- * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api/Cancel-Algo-Order
- */
-export interface WSAPIFuturesAlgoOrderCancelRequest {
-  algoid?: number;
-  clientalgoid?: string;
-  recvWindow?: number;
-  timestamp: number;
-}
-
-================
 File: src/types/futures.ts
 ================
 import {
@@ -17437,6 +16741,826 @@ public subscribeSpotDiffBookDepth(
   ): Promise<unknown>
 
 ================
+File: src/types/websockets/ws-api-requests.ts
+================
+import {
+  FuturesAlgoConditionalOrderTypes,
+  FuturesAlgoOrderType,
+  FuturesOrderType,
+  PositionSide,
+  PriceMatchMode,
+  WorkingType,
+} from '../futures';
+import {
+  BooleanString,
+  KlineInterval,
+  numberInString,
+  OrderResponseType,
+  OrderSide,
+  OrderTimeInForce,
+  OrderType,
+  SelfTradePreventionMode,
+} from '../shared';
+⋮----
+/**
+ * Simple request params with timestamp (required) & recv window (optional)
+ */
+export type WSAPIRecvWindowTimestamp = {
+  recvWindow?: number;
+  timestamp: number;
+};
+⋮----
+/**
+ *
+ * Authentication request types
+ *
+ */
+export interface WSAPISessionLogonRequest {
+  timestamp: number;
+}
+⋮----
+/**
+ *
+ * General request types
+ *
+ */
+export interface WSAPIExchangeInfoRequest {
+  symbol?: string;
+  symbols?: string[];
+  permissions?: string[];
+  showPermissionSets?: boolean;
+  symbolStatus?: string;
+}
+⋮----
+/**
+ *
+ * Market data request types
+ *
+ */
+⋮----
+export interface WSAPIOrderBookRequest {
+  symbol: string;
+  limit?: number;
+  symbolStatus?: string;
+}
+⋮----
+export interface WSAPITradesRecentRequest {
+  symbol: string;
+  limit?: number;
+}
+⋮----
+export interface WSAPITradesHistoricalRequest {
+  symbol: string;
+  fromId?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIBlockTradesHistoricalRequest {
+  symbol: string;
+  fromId: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPITradesAggregateRequest {
+  symbol: string;
+  fromId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIKlinesRequest {
+  symbol: string;
+  interval: KlineInterval;
+  startTime?: number;
+  endTime?: number;
+  timeZone?: string;
+  limit?: number;
+}
+⋮----
+export interface WSAPIAvgPriceRequest {
+  symbol: string;
+}
+⋮----
+/**
+ * Query execution rules (e.g. PRICE_RANGE). Only one of symbol, symbols, or symbolStatus per request.
+ */
+export interface WSAPIExecutionRulesRequest {
+  symbol?: string;
+  symbols?: string[];
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
+}
+⋮----
+export interface WSAPIReferencePriceRequest {
+  symbol: string;
+}
+⋮----
+export interface WSAPIReferencePriceCalculationRequest {
+  symbol: string;
+  symbolStatus?: 'TRADING' | 'HALT' | 'BREAK' | 'CANCEL_ONLY';
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITicker24hrRequest {
+  symbol?: string;
+  symbols?: string[];
+  type?: 'FULL' | 'MINI';
+  symbolStatus?: string;
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerTradingDayRequest {
+  symbol?: string;
+  symbols?: string[];
+  timeZone?: string;
+  type?: 'FULL' | 'MINI';
+  symbolStatus?: string;
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerRequest {
+  symbol?: string;
+  symbols?: string[];
+  windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
+  type?: 'FULL' | 'MINI';
+  symbolStatus?: string;
+}
+⋮----
+windowSize?: string; // '1m', '2m' ... '59m', '1h', '2h' ... '23h', '1d', '2d' ... '7d'
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerPriceRequest {
+  symbol?: string;
+  symbols?: string[];
+  symbolStatus?: string;
+}
+⋮----
+/**
+ * Symbol for single symbol, or symbols for multiple symbols
+ */
+export interface WSAPITickerBookRequest {
+  symbol?: string;
+  symbols?: string[];
+  symbolStatus?: string;
+}
+⋮----
+/**
+ *
+ * Account request types - Spot
+ *
+ */
+⋮----
+export interface WSAPIAllOrdersRequest {
+  symbol: string;
+  orderId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIAllOrderListsRequest {
+  fromId?: number;
+  startTime?: number;
+  endTime?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIMyTradesRequest {
+  symbol: string;
+  orderId?: number;
+  startTime?: number;
+  endTime?: number;
+  fromId?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIMyPreventedMatchesRequest {
+  symbol: string;
+  preventedMatchId?: number;
+  orderId?: number;
+  fromPreventedMatchId?: number;
+  limit?: number;
+}
+⋮----
+export interface WSAPIMyAllocationsRequest {
+  symbol: string;
+  startTime?: number;
+  endTime?: number;
+  fromAllocationId?: number;
+  limit?: number;
+  orderId?: number;
+}
+⋮----
+/**
+ * Trading request types
+ */
+type SpotPegPriceType = 'PRIMARY_PEG' | 'MARKET_PEG';
+type SpotPegOffsetType = 'PRICE_LEVEL';
+⋮----
+export interface WSAPINewSpotOrderRequest {
+  symbol: string;
+  side: OrderSide;
+  type: OrderType;
+  timeInForce?: OrderTimeInForce;
+  price?: numberInString;
+  quantity?: numberInString;
+  quoteOrderQty?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: numberInString;
+  newClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  pegPriceType?: SpotPegPriceType;
+  pegOffsetValue?: number;
+  pegOffsetType?: SpotPegOffsetType;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderTestRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  type: string;
+  timeInForce?: string;
+  price?: numberInString;
+  quantity?: numberInString;
+  quoteOrderQty?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: numberInString;
+  newClientOrderId?: string;
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  pegPriceType?: SpotPegPriceType;
+  pegOffsetValue?: number;
+  pegOffsetType?: SpotPegOffsetType;
+  computeCommissionRates?: boolean;
+  timestamp: number;
+  recvWindow?: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderStatusRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderCancelRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  newClientOrderId?: string;
+  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderCancelReplaceRequest {
+  symbol: string;
+  cancelReplaceMode: 'STOP_ON_FAILURE' | 'ALLOW_FAILURE';
+  cancelOrderId?: number;
+  cancelOrigClientOrderId?: string;
+  cancelNewClientOrderId?: string;
+  side: 'BUY' | 'SELL';
+  type: string;
+  timeInForce?: string;
+  price?: numberInString;
+  quantity?: numberInString;
+  quoteOrderQty?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: numberInString;
+  newClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  pegPriceType?: SpotPegPriceType;
+  pegOffsetValue?: number;
+  pegOffsetType?: SpotPegOffsetType;
+  cancelRestrictions?: 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
+  orderRateLimitExceededMode?: 'DO_NOTHING' | 'CANCEL_ONLY';
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderAmendKeepPriorityRequest {
+  symbol: string;
+  orderId?: number | string;
+  origClientOrderId?: string;
+  newClientOrderId?: string;
+  newQty?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOpenOrdersStatusRequest {
+  symbol?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOpenOrdersCancelAllRequest {
+  symbol: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/**
+ * Order list request types
+ */
+export interface WSAPIOrderListPlaceRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  price: numberInString;
+  quantity: numberInString;
+  listClientOrderId?: string;
+  limitClientOrderId?: string;
+  limitIcebergQty?: numberInString;
+  limitStrategyId?: number;
+  limitStrategyType?: number;
+  stopPrice?: numberInString;
+  trailingDelta?: number;
+  stopClientOrderId?: string;
+  stopLimitPrice?: numberInString;
+  stopLimitTimeInForce?: string;
+  stopIcebergQty?: numberInString;
+  stopStrategyId?: number;
+  stopStrategyType?: number;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListPlaceOCORequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  quantity: numberInString;
+  listClientOrderId?: string;
+  aboveType:
+    | 'STOP_LOSS_LIMIT'
+    | 'STOP_LOSS'
+    | 'LIMIT_MAKER'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  aboveClientOrderId?: string;
+  aboveIcebergQty?: numberInString;
+  abovePrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  aboveQuoteNotionalLimit?: numberInString;
+  aboveStopPrice?: numberInString;
+  aboveTrailingDelta?: number;
+  aboveTimeInForce?: string;
+  aboveStrategyId?: number;
+  aboveStrategyType?: number;
+  belowType:
+    | 'STOP_LOSS'
+    | 'STOP_LOSS_LIMIT'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT'
+    | 'LIMIT_MAKER';
+  belowClientOrderId?: string;
+  belowIcebergQty?: numberInString;
+  belowPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  belowQuoteNotionalLimit?: numberInString;
+  belowStopPrice?: numberInString;
+  belowTrailingDelta?: number;
+  belowTimeInForce?: string;
+  belowStrategyId?: number;
+  belowStrategyType?: number;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderListPlaceOTORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  pendingType: string;
+  pendingSide: 'BUY' | 'SELL';
+  pendingClientOrderId?: string;
+  pendingPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: numberInString;
+  pendingStopPrice?: numberInString;
+  pendingTrailingDelta?: numberInString;
+  pendingQuantity: numberInString;
+  pendingIcebergQty?: numberInString;
+  pendingTimeInForce?: string;
+  pendingStrategyId?: number;
+  pendingStrategyType?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderListPlaceOTOCORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  pendingSide: 'BUY' | 'SELL';
+  pendingQuantity: number | string;
+  pendingAboveType:
+    | 'STOP_LOSS_LIMIT'
+    | 'STOP_LOSS'
+    | 'LIMIT_MAKER'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  pendingAboveClientOrderId?: string;
+  pendingAbovePrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: numberInString;
+  pendingAboveStopPrice?: numberInString;
+  pendingAboveTrailingDelta?: numberInString;
+  pendingAboveIcebergQty?: numberInString;
+  pendingAboveTimeInForce?: string;
+  pendingAboveStrategyId?: number;
+  pendingAboveStrategyType?: number;
+  pendingBelowType:
+    | 'STOP_LOSS'
+    | 'STOP_LOSS_LIMIT'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT'
+    | 'LIMIT_MAKER';
+  pendingBelowClientOrderId?: string;
+  pendingBelowPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: numberInString;
+  pendingBelowStopPrice?: numberInString;
+  pendingBelowTrailingDelta?: numberInString;
+  pendingBelowIcebergQty?: numberInString;
+  pendingBelowTimeInForce?: string;
+  pendingBelowStrategyId?: number;
+  pendingBelowStrategyType?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderListPlaceOPORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  workingPegPriceType?: string;
+  workingPegOffsetType?: string;
+  workingPegOffsetValue?: number;
+  pendingType: string;
+  pendingSide: 'BUY' | 'SELL';
+  pendingClientOrderId?: string;
+  pendingPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: numberInString;
+  pendingStopPrice?: numberInString;
+  pendingTrailingDelta?: numberInString;
+  pendingIcebergQty?: numberInString;
+  pendingTimeInForce?: string;
+  pendingStrategyId?: number;
+  pendingStrategyType?: number;
+  pendingPegPriceType?: string;
+  pendingPegOffsetType?: string;
+  pendingPegOffsetValue?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderListPlaceOPOCORequest {
+  symbol: string;
+  listClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  selfTradePreventionMode?: string;
+  workingType: 'LIMIT' | 'LIMIT_MAKER';
+  workingSide: 'BUY' | 'SELL';
+  workingClientOrderId?: string;
+  workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
+  workingQuantity: numberInString;
+  workingIcebergQty?: numberInString;
+  workingTimeInForce?: string;
+  workingStrategyId?: number;
+  workingStrategyType?: number;
+  workingPegPriceType?: string;
+  workingPegOffsetType?: string;
+  workingPegOffsetValue?: number;
+  pendingSide: 'BUY' | 'SELL';
+  pendingAboveType:
+    | 'STOP_LOSS_LIMIT'
+    | 'STOP_LOSS'
+    | 'LIMIT_MAKER'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  pendingAboveClientOrderId?: string;
+  pendingAbovePrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: numberInString;
+  pendingAboveStopPrice?: numberInString;
+  pendingAboveTrailingDelta?: numberInString;
+  pendingAboveIcebergQty?: numberInString;
+  pendingAboveTimeInForce?: string;
+  pendingAboveStrategyId?: number;
+  pendingAboveStrategyType?: number;
+  pendingAbovePegPriceType?: string;
+  pendingAbovePegOffsetType?: string;
+  pendingAbovePegOffsetValue?: number;
+  pendingBelowType?:
+    | 'STOP_LOSS'
+    | 'STOP_LOSS_LIMIT'
+    | 'TAKE_PROFIT'
+    | 'TAKE_PROFIT_LIMIT';
+  pendingBelowClientOrderId?: string;
+  pendingBelowPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: numberInString;
+  pendingBelowStopPrice?: numberInString;
+  pendingBelowTrailingDelta?: numberInString;
+  pendingBelowIcebergQty?: numberInString;
+  pendingBelowTimeInForce?: string;
+  pendingBelowStrategyId?: number;
+  pendingBelowStrategyType?: number;
+  pendingBelowPegPriceType?: string;
+  pendingBelowPegOffsetType?: string;
+  pendingBelowPegOffsetValue?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+export interface WSAPIOrderListStatusRequest {
+  origClientOrderId?: string;
+  orderListId?: number;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIOrderListCancelRequest {
+  symbol: string;
+  orderListId?: number;
+  listClientOrderId?: string;
+  newClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+/**
+ * SOR request types
+ */
+export interface WSAPISOROrderPlaceRequest {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  type: 'LIMIT' | 'MARKET';
+  timeInForce?: string;
+  price?: numberInString;
+  quantity: numberInString;
+  newClientOrderId?: string;
+  newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
+  icebergQty?: numberInString;
+  strategyId?: number;
+  strategyType?: number;
+  selfTradePreventionMode?: string;
+  timestamp: number;
+  recvWindow?: number;
+}
+⋮----
+export type WSAPISOROrderTestRequest = WSAPISOROrderPlaceRequest & {
+  computeCommissionRates?: boolean;
+};
+⋮----
+/**
+ * Futures market data request types
+ */
+⋮----
+export interface WSAPIFuturesOrderBookRequest {
+  symbol: string;
+  limit?: number;
+}
+⋮----
+export interface WSAPIFuturesTickerPriceRequest {
+  symbol?: string;
+}
+⋮----
+export interface WSAPIFuturesTickerBookRequest {
+  symbol?: string;
+}
+⋮----
+/**
+ * Futures trading request types
+ */
+⋮----
+export interface WSAPINewFuturesOrderRequest<numberType = numberInString> {
+  symbol: string;
+  side: OrderSide;
+  positionSide?: PositionSide;
+  type: FuturesOrderType;
+  timeInForce?: OrderTimeInForce;
+  quantity?: numberType;
+  reduceOnly?: BooleanString;
+  price?: numberType;
+  newClientOrderId?: string;
+  stopPrice?: numberType;
+  closePosition?: BooleanString;
+  activationPrice?: numberType;
+  callbackRate?: numberType;
+  workingType?: WorkingType;
+  priceProtect?: BooleanString;
+  newOrderRespType?: 'ACK' | 'RESULT';
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  priceMatch?: PriceMatchMode;
+  goodTillDate?: number; // Mandatory when timeInForce is GTD
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+goodTillDate?: number; // Mandatory when timeInForce is GTD
+⋮----
+export interface WSAPIFuturesOrderModifyRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  side: 'BUY' | 'SELL';
+  quantity: numberInString;
+  price: numberInString;
+  priceMatch?:
+    | 'NONE'
+    | 'OPPONENT'
+    | 'OPPONENT_5'
+    | 'OPPONENT_10'
+    | 'OPPONENT_20'
+    | 'QUEUE'
+    | 'QUEUE_5'
+    | 'QUEUE_10'
+    | 'QUEUE_20';
+  origType?: string;
+  positionSide?: 'BOTH' | 'LONG' | 'SHORT';
+  modifyId?: number;
+  reduceOnly?: BooleanString;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesOrderCancelRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesOrderStatusRequest {
+  symbol: string;
+  orderId?: number;
+  origClientOrderId?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesPositionRequest {
+  symbol?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIFuturesPositionV2Request {
+  symbol?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIAccountInformationRequest {
+  omitZeroBalances?: boolean;
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+export interface WSAPIAccountCommissionWSAPIRequest {
+  symbol: string;
+}
+⋮----
+/**
+ * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api
+ */
+export interface WSAPINewFuturesAlgoOrderRequest<numberType = numberInString> {
+  algoType: FuturesAlgoOrderType;
+  symbol: string;
+  side: OrderSide;
+  positionSide?: PositionSide;
+  type: FuturesAlgoConditionalOrderTypes;
+  timeInForce?: OrderTimeInForce;
+  quantity?: numberType;
+  reduceOnly?: BooleanString;
+  price?: numberInString;
+  clientAlgoId?: string;
+  triggerPrice?: numberInString;
+  closePosition?: BooleanString;
+  activatePrice?: numberInString;
+  callbackRate?: numberInString;
+  workingType?: WorkingType;
+  priceProtect?: BooleanString;
+  newOrderRespType?: OrderResponseType;
+  priceMatch?: PriceMatchMode;
+  selfTradePreventionMode?: SelfTradePreventionMode;
+  goodTillDate?: number; // Mandatory when timeInForce is GTD
+  recvWindow?: number;
+  timestamp: number;
+}
+⋮----
+goodTillDate?: number; // Mandatory when timeInForce is GTD
+⋮----
+/**
+ * Ref: https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/websocket-api/Cancel-Algo-Order
+ */
+export interface WSAPIFuturesAlgoOrderCancelRequest {
+  algoid?: number;
+  clientalgoid?: string;
+  recvWindow?: number;
+  timestamp: number;
+}
+
+================
 File: README.md
 ================
 # Node.js & JavaScript SDK for Binance REST APIs & WebSockets
@@ -18325,6 +18449,8 @@ import {
   RateLimiter,
   SelfTradePreventionMode,
   SideEffects,
+  SpotEffectiveSelfTradePreventionMode,
+  SpotExpiryReason,
   StringBoolean,
   SymbolFilter,
 } from './shared';
@@ -18797,6 +18923,11 @@ export interface ExchangeInfoParams {
 type SpotPegPriceType = 'PRIMARY_PEG' | 'MARKET_PEG';
 type SpotPegOffsetType = 'PRICE_LEVEL';
 ⋮----
+/**
+ * From 2026-11-20, BUY limit orders that trade on entry then rest return any lock above
+ * remaining quantity x limit price to free in the same balance update. Applies to LIMIT GTC,
+ * triggered STOP_LOSS_LIMIT/TAKE_PROFIT_LIMIT, order-list limits and SOR; icebergs keep the full lock.
+ */
 export interface NewSpotOrderParams<
   T extends OrderType = OrderType,
   RT extends OrderResponseType | undefined = OrderResponseType,
@@ -18807,6 +18938,8 @@ export interface NewSpotOrderParams<
   timeInForce?: OrderTimeInForce;
   quantity?: number;
   quoteOrderQty?: number;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: number;
   price?: number;
   newClientOrderId?: string;
   strategyId?: number;
@@ -18823,6 +18956,8 @@ export interface NewSpotOrderParams<
   sideEffectType?: SideEffects;
   autoRepayAtCancel?: StringBoolean;
 }
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
 ⋮----
 export type CancelRestrictions = 'ONLY_NEW' | 'ONLY_PARTIALLY_FILLED';
 export type CancelReplaceMode = 'STOP_ON_FAILURE' | 'ALLOW_FAILURE';
@@ -18935,6 +19070,8 @@ export interface SymbolExchangeInfo {
   ocoAllowed: boolean;
   opoAllowed: boolean;
   quoteOrderQtyMarketAllowed: boolean;
+  marketQuoteNotionalLimitAllowed?: boolean;
+  limitQuoteNotionalLimitAllowed?: boolean;
   allowTrailingStop: boolean;
   cancelReplaceAllowed: boolean;
   isSpotTradingAllowed: boolean;
@@ -19121,6 +19258,7 @@ export interface OrderResponseACK {
 ⋮----
 /** Conditional fields on POST /api/v3/order RESULT/FULL. Only present when the matching condition is met. */
 export interface SpotNewOrderConditionalFields {
+  quoteNotionalLimit?: numberInString;
   icebergQty?: numberInString;
   preventedMatchId?: number;
   preventedQuantity?: numberInString;
@@ -19153,7 +19291,7 @@ export interface OrderResponseResult extends SpotNewOrderConditionalFields {
   workingTime: number;
   selfTradePreventionMode: SelfTradePreventionMode;
   /** Present with newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 ⋮----
 /** Present with newOrderRespType RESULT or FULL when the order has an expiry reason. */
@@ -19165,6 +19303,13 @@ export interface OrderFill {
   commissionAsset: string | null;
   tradeId: number;
 }
+⋮----
+export interface SpotOrderPreventedMatch {
+  /** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+  effectiveSelfTradePreventionMode?: SpotEffectiveSelfTradePreventionMode;
+}
+⋮----
+/** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
 ⋮----
 export interface OrderResponseFull extends SpotNewOrderConditionalFields {
   symbol: string;
@@ -19187,8 +19332,9 @@ export interface OrderResponseFull extends SpotNewOrderConditionalFields {
   workingTime: number;
   selfTradePreventionMode: SelfTradePreventionMode;
   /** Present with newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
   fills: OrderFill[];
+  preventedMatches?: SpotOrderPreventedMatch[];
 }
 ⋮----
 /** Present with newOrderRespType RESULT or FULL when the order has an expiry reason. */
@@ -19216,7 +19362,7 @@ export interface OrderListOrder {
   orderId: number;
   clientOrderId: string;
   /** Present only for expired orders. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 ⋮----
 /** Present only for expired orders. */
@@ -19298,6 +19444,7 @@ export interface SORTestOrderResponse {
 discount: numberInString; //Standard commission is reduced by this rate when paying commission in BNB. Staff later confirmed this is a multiplier: 0.75 means pay 75% of standard. The FAQ 0.25 example is fictional.
 ⋮----
 export interface CancelSpotOrderResult {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   origClientOrderId: string;
   orderId: number;
@@ -19376,6 +19523,7 @@ export interface ReplaceSpotOrderResultSuccess<
 }
 ⋮----
 export interface SpotOrder {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   orderId: number;
   orderListId: number;
@@ -19396,7 +19544,7 @@ export interface SpotOrder {
   origQuoteOrderQty: numberInString;
   selfTradePreventionMode: SelfTradePreventionMode;
   /** Present only for expired orders. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 ⋮----
 /** Present only for expired orders. */
@@ -19405,6 +19553,8 @@ export interface SpotAmendKeepPriorityResult {
   transactTime: number;
   executionId: number;
   amendedOrder: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -21152,6 +21302,8 @@ export interface NewOrderListOTOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'FOK' | 'IOC' | 'GTC';
@@ -21161,6 +21313,8 @@ export interface NewOrderListOTOParams {
   pendingSide: 'BUY' | 'SELL';
   pendingClientOrderId?: string;
   pendingPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: string;
   pendingStopPrice?: string;
   pendingTrailingDelta?: string;
   pendingQuantity: string;
@@ -21169,6 +21323,10 @@ export interface NewOrderListOTOParams {
   pendingStrategyId?: number;
   pendingStrategyType?: number;
 }
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
 ⋮----
 export interface NewOrderListOTOResponse {
   orderListId: number;
@@ -21184,6 +21342,9 @@ export interface NewOrderListOTOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -21211,6 +21372,8 @@ export interface NewOrderListOTOCOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'GTC' | 'IOC' | 'FOK';
@@ -21221,6 +21384,8 @@ export interface NewOrderListOTOCOParams {
   pendingAboveType: 'LIMIT_MAKER' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT';
   pendingAboveClientOrderId?: string;
   pendingAbovePrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: string;
   pendingAboveStopPrice?: string;
   pendingAboveTrailingDelta?: string;
   pendingAboveIcebergQty?: string;
@@ -21230,6 +21395,8 @@ export interface NewOrderListOTOCOParams {
   pendingBelowType: 'LIMIT_MAKER' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT';
   pendingBelowClientOrderId?: string;
   pendingBelowPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: string;
   pendingBelowStopPrice?: string;
   pendingBelowTrailingDelta?: string;
   pendingBelowIcebergQty?: string;
@@ -21237,6 +21404,12 @@ export interface NewOrderListOTOCOParams {
   pendingBelowStrategyId?: number;
   pendingBelowStrategyType?: number;
 }
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
 ⋮----
 export interface NewOrderListOTOCOResponse {
   orderListId: number;
@@ -21252,6 +21425,9 @@ export interface NewOrderListOTOCOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -21280,6 +21456,8 @@ export interface NewOrderListOPOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'FOK' | 'IOC' | 'GTC';
@@ -21292,6 +21470,8 @@ export interface NewOrderListOPOParams {
   pendingSide: 'BUY' | 'SELL';
   pendingClientOrderId?: string;
   pendingPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: string;
   pendingStopPrice?: string;
   pendingTrailingDelta?: string;
   pendingIcebergQty?: string;
@@ -21302,6 +21482,10 @@ export interface NewOrderListOPOParams {
   pendingPegOffsetType?: string;
   pendingPegOffsetValue?: number;
 }
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
 ⋮----
 export interface NewOrderListOPOResponse {
   orderListId: number;
@@ -21317,6 +21501,9 @@ export interface NewOrderListOPOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -21345,6 +21532,8 @@ export interface NewOrderListOPOCOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'GTC' | 'IOC' | 'FOK';
@@ -21362,6 +21551,8 @@ export interface NewOrderListOPOCOParams {
     | 'TAKE_PROFIT_LIMIT';
   pendingAboveClientOrderId?: string;
   pendingAbovePrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: string;
   pendingAboveStopPrice?: string;
   pendingAboveTrailingDelta?: string;
   pendingAboveIcebergQty?: string;
@@ -21378,6 +21569,8 @@ export interface NewOrderListOPOCOParams {
     | 'TAKE_PROFIT_LIMIT';
   pendingBelowClientOrderId?: string;
   pendingBelowPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: string;
   pendingBelowStopPrice?: string;
   pendingBelowTrailingDelta?: string;
   pendingBelowIcebergQty?: string;
@@ -21388,6 +21581,12 @@ export interface NewOrderListOPOCOParams {
   pendingBelowPegOffsetType?: string;
   pendingBelowPegOffsetValue?: number;
 }
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
+⋮----
+/** BUY only; Binance has not decided when this feature will be enabled. */
 ⋮----
 export interface NewOrderListOPOCOResponse {
   orderListId: number;
@@ -21403,6 +21602,9 @@ export interface NewOrderListOPOCOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -26921,7 +27123,7 @@ replaceOrder<
 /**
    * Reduce the quantity of an existing open order while keeping its priority in the order book.
    * The new quantity must be less than the current quantity.
-   * https://binance-docs.github.io/apidocs/futures/en/#order-amend-keep-priority-trade
+   * https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#order-amend-keep-priority-trade
    */
 amendOrderKeepPriority(
     params: AmendKeepPriorityParams,
@@ -29515,7 +29717,7 @@ getBrokerSpotRebateHistory(days: 7 | 30, customerId?: string)
    * @deprecated, found only in old docs
    * Use EXCHANGE LINK endpoints instead
    **/
-getBrokerIfNewSpotUser(): Promise<{
+getBrokerIfNewSpotUser(params: { apiAgentCode: string }): Promise<{
     rebateWorking: boolean;
     ifNewUser: boolean;
   }>
@@ -29532,7 +29734,11 @@ getBrokerSubAccountDepositHistory(
    * @deprecated, found only in old docs
    * Use EXCHANGE LINK endpoints instead
    **/
-getBrokerUserCustomisedId(market: 'spot' | 'futures')
+getBrokerUserCustomisedId(
+    ...[market, params]:
+      | [market: 'spot', params: { apiAgentCode: string }]
+      | [market: 'futures', params: { brokerId: string }]
+  )
 ⋮----
 /**
    * @deprecated, found only in old docs
@@ -29790,7 +29996,7 @@ File: package.json
 ================
 {
   "name": "binance",
-  "version": "3.6.12",
+  "version": "3.6.13",
   "description": "Professional Node.js & JavaScript SDK for Binance REST APIs & WebSockets, with TypeScript & end-to-end tests.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
