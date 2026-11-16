@@ -22,6 +22,8 @@ import {
   OrderTimeInForce,
   OrderType,
   SelfTradePreventionMode,
+  SpotEffectiveSelfTradePreventionMode,
+  SpotExpiryReason,
 } from '../shared';
 import {
   AccountUpdateEventType,
@@ -284,7 +286,10 @@ export interface WsMessageSpotUserDataExecutionReportEventFormatted
   orderQuoteQty: number;
   workingTime: number;
   selfTradePreventionMode: SelfTradePreventionMode;
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
+  /** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+  effectiveSelfTradePreventionMode?: SpotEffectiveSelfTradePreventionMode;
+  quoteNotionalLimit?: number;
   trailingDelta?: number;
   preventedMatchId?: number;
   trailingTime?: number;
@@ -318,6 +323,8 @@ export interface WsMessagePortfolioMarginProAccountUpdateFormatted
 export interface WsMessageWsapiServerShutdownFormatted extends WsSharedBase {
   eventType: 'serverShutdown';
   eventTime: number;
+  /** Time when the WebSocket session will shut down. */
+  shutdownTime?: number;
 }
 
 export interface OrderObjectFormatted {

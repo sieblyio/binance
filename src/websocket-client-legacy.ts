@@ -1613,7 +1613,7 @@ export class WebsocketClientV1 extends EventEmitter {
     forceNewConnection?: boolean,
   ): WebSocket {
     const lowerCaseSymbol = symbol.toLowerCase();
-    const streamName = 'diffBookDepth';
+    const streamName = 'depth';
     const wsKey = getLegacyWsStoreKeyWithContext(
       market,
       'diffBookDepth',
@@ -1621,7 +1621,10 @@ export class WebsocketClientV1 extends EventEmitter {
       String(updateMs),
     );
 
-    const updateMsSuffx = typeof updateMs === 'number' ? `@${updateMs}ms` : '';
+    const updateMsSuffx =
+      typeof updateMs === 'number' && !(market === 'spot' && updateMs === 1000)
+        ? `@${updateMs}ms`
+        : '';
 
     return this.connectToWsUrl(
       this.getWsBaseUrl(market, wsKey) +

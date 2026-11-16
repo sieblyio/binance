@@ -11,8 +11,13 @@ import {
   OrderSide,
   OrderTimeInForce,
   SelfTradePreventionMode,
+  SpotExpiryReason,
 } from '../shared';
-import { OrderResponse, SpotNewOrderConditionalFields } from '../spot';
+import {
+  OrderResponse,
+  SpotNewOrderConditionalFields,
+  SpotOrderPreventedMatch,
+} from '../spot';
 
 /**
  * Error response type
@@ -236,6 +241,7 @@ export interface WSAPIRateLimit {
 }
 
 export interface WSAPIOrder {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   orderId: number;
   orderListId: number;
@@ -259,7 +265,7 @@ export interface WSAPIOrder {
   preventedMatchId?: number;
   preventedQuantity?: numberInString;
   /** Present only for expired orders. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 
 export interface WSAPIBlockTrade {
@@ -362,6 +368,7 @@ export interface WSAPIOrderTestWithCommission {
 }
 
 export interface WSAPIOrderCancel {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   origClientOrderId: string;
   orderId: number;
@@ -441,7 +448,7 @@ export interface WSAPIOrderListStatusResponse {
     orderId: number;
     clientOrderId: string;
     /** Present only for expired orders. */
-    expiryReason?: string;
+    expiryReason?: SpotExpiryReason;
   }[];
 }
 
@@ -449,6 +456,7 @@ export interface WSAPIOrderListStatusResponse {
  * SOR response types
  */
 export interface WSAPISOROrderPlaceResponse {
+  preventedMatches?: SpotOrderPreventedMatch[];
   symbol: string;
   orderId: number;
   orderListId: number;
@@ -465,7 +473,7 @@ export interface WSAPISOROrderPlaceResponse {
   side: string;
   workingTime: number;
   /** With newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
   fills: {
     matchType: string;
     price: string;
@@ -713,7 +721,7 @@ export interface WSAPISpotOrderRESULT
   workingTime: number;
   selfTradePreventionMode: string;
   /** With newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 
 export interface WSAPISpotOrderFill {
@@ -726,6 +734,7 @@ export interface WSAPISpotOrderFill {
 
 export interface WSAPISpotOrderFULL extends WSAPISpotOrderRESULT {
   fills: WSAPISpotOrderFill[];
+  preventedMatches?: SpotOrderPreventedMatch[];
 }
 
 export type WSAPISpotOrderResponse =

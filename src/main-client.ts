@@ -1026,13 +1026,13 @@ export class MainClient extends BaseRestClient {
   /**
    * Reduce the quantity of an existing open order while keeping its priority in the order book.
    * The new quantity must be less than the current quantity.
-   * https://binance-docs.github.io/apidocs/futures/en/#order-amend-keep-priority-trade
+   * https://developers.binance.com/docs/binance-spot-api-docs/rest-api/trading-endpoints#order-amend-keep-priority-trade
    */
   amendOrderKeepPriority(
     params: AmendKeepPriorityParams,
   ): Promise<SpotAmendKeepPriorityResult> {
     this.validateOrderId(params, 'newClientOrderId');
-    return this.putPrivate('fapi/v1/order/amend/keepPriority', params);
+    return this.putPrivate('api/v3/order/amend/keepPriority', params);
   }
 
   getOpenOrders(params?: { symbol?: string }): Promise<SpotOrder[]> {
@@ -4911,11 +4911,11 @@ export class MainClient extends BaseRestClient {
    * @deprecated, found only in old docs
    * Use EXCHANGE LINK endpoints instead
    **/
-  getBrokerIfNewSpotUser(): Promise<{
+  getBrokerIfNewSpotUser(params: { apiAgentCode: string }): Promise<{
     rebateWorking: boolean;
     ifNewUser: boolean;
   }> {
-    return this.getPrivate('sapi/v1/apiReferral/ifNewUser');
+    return this.getPrivate('sapi/v1/apiReferral/ifNewUser', params);
   }
 
   /**
@@ -4925,16 +4925,23 @@ export class MainClient extends BaseRestClient {
   getBrokerSubAccountDepositHistory(
     params?: GetBrokerSubAccountDepositHistoryParams,
   ): Promise<SubAccountDepositHistoryList[]> {
-    return this.getPrivate('sapi/v1/bv1/apiReferral/ifNewUser', params);
+    return this.getPrivate('sapi/v1/broker/subAccount/depositHist', params);
   }
 
   /**
    * @deprecated, found only in old docs
    * Use EXCHANGE LINK endpoints instead
    **/
-  getBrokerUserCustomisedId(market: 'spot' | 'futures') {
+  getBrokerUserCustomisedId(
+    ...[market, params]:
+      | [market: 'spot', params: { apiAgentCode: string }]
+      | [market: 'futures', params: { brokerId: string }]
+  ) {
     const prefix = market === 'spot' ? 'sapi' : 'fapi';
-    return this.getPrivate(prefix + '/v1/apiReferral/userCustomization');
+    return this.getPrivate(
+      prefix + '/v1/apiReferral/userCustomization',
+      params,
+    );
   }
 
   /**
@@ -4944,7 +4951,7 @@ export class MainClient extends BaseRestClient {
   enableFuturesBrokerSubAccount(
     params: EnableFuturesBrokerSubAccountParams,
   ): Promise<EnableFuturesBrokerSubAccountResponse> {
-    return this.postPrivate('sapi/v1/broker/subAccount', params);
+    return this.postPrivate('sapi/v1/broker/subAccount/futures', params);
   }
 
   /**

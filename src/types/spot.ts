@@ -14,6 +14,8 @@ import {
   RateLimiter,
   SelfTradePreventionMode,
   SideEffects,
+  SpotEffectiveSelfTradePreventionMode,
+  SpotExpiryReason,
   StringBoolean,
   SymbolFilter,
 } from './shared';
@@ -467,6 +469,11 @@ export interface ExchangeInfoParams {
 type SpotPegPriceType = 'PRIMARY_PEG' | 'MARKET_PEG';
 type SpotPegOffsetType = 'PRICE_LEVEL';
 
+/**
+ * From 2026-11-20, BUY limit orders that trade on entry then rest return any lock above
+ * remaining quantity x limit price to free in the same balance update. Applies to LIMIT GTC,
+ * triggered STOP_LOSS_LIMIT/TAKE_PROFIT_LIMIT, order-list limits and SOR; icebergs keep the full lock.
+ */
 export interface NewSpotOrderParams<
   T extends OrderType = OrderType,
   RT extends OrderResponseType | undefined = OrderResponseType,
@@ -477,6 +484,8 @@ export interface NewSpotOrderParams<
   timeInForce?: OrderTimeInForce;
   quantity?: number;
   quoteOrderQty?: number;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: number;
   price?: number;
   newClientOrderId?: string;
   strategyId?: number;
@@ -594,6 +603,8 @@ export interface SymbolExchangeInfo {
   ocoAllowed: boolean;
   opoAllowed: boolean;
   quoteOrderQtyMarketAllowed: boolean;
+  marketQuoteNotionalLimitAllowed?: boolean;
+  limitQuoteNotionalLimitAllowed?: boolean;
   allowTrailingStop: boolean;
   cancelReplaceAllowed: boolean;
   isSpotTradingAllowed: boolean;
@@ -780,6 +791,7 @@ export interface OrderResponseACK {
 
 /** Conditional fields on POST /api/v3/order RESULT/FULL. Only present when the matching condition is met. */
 export interface SpotNewOrderConditionalFields {
+  quoteNotionalLimit?: numberInString;
   icebergQty?: numberInString;
   preventedMatchId?: number;
   preventedQuantity?: numberInString;
@@ -812,7 +824,7 @@ export interface OrderResponseResult extends SpotNewOrderConditionalFields {
   workingTime: number;
   selfTradePreventionMode: SelfTradePreventionMode;
   /** Present with newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 
 export interface OrderFill {
@@ -821,6 +833,11 @@ export interface OrderFill {
   commission: numberInString | null;
   commissionAsset: string | null;
   tradeId: number;
+}
+
+export interface SpotOrderPreventedMatch {
+  /** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+  effectiveSelfTradePreventionMode?: SpotEffectiveSelfTradePreventionMode;
 }
 
 export interface OrderResponseFull extends SpotNewOrderConditionalFields {
@@ -844,8 +861,9 @@ export interface OrderResponseFull extends SpotNewOrderConditionalFields {
   workingTime: number;
   selfTradePreventionMode: SelfTradePreventionMode;
   /** Present with newOrderRespType RESULT or FULL when the order has an expiry reason. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
   fills: OrderFill[];
+  preventedMatches?: SpotOrderPreventedMatch[];
 }
 
 export type OrderResponse =
@@ -871,7 +889,7 @@ export interface OrderListOrder {
   orderId: number;
   clientOrderId: string;
   /** Present only for expired orders. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 
 export interface OrderListResponse<RT extends OrderResponseType = 'ACK'> {
@@ -939,6 +957,7 @@ export interface SORTestOrderResponse {
 }
 
 export interface CancelSpotOrderResult {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   origClientOrderId: string;
   orderId: number;
@@ -1017,6 +1036,7 @@ export interface ReplaceSpotOrderResultSuccess<
 }
 
 export interface SpotOrder {
+  quoteNotionalLimit?: numberInString;
   symbol: string;
   orderId: number;
   orderListId: number;
@@ -1037,13 +1057,15 @@ export interface SpotOrder {
   origQuoteOrderQty: numberInString;
   selfTradePreventionMode: SelfTradePreventionMode;
   /** Present only for expired orders. */
-  expiryReason?: string;
+  expiryReason?: SpotExpiryReason;
 }
 
 export interface SpotAmendKeepPriorityResult {
   transactTime: number;
   executionId: number;
   amendedOrder: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -2762,6 +2784,8 @@ export interface NewOrderListOTOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'FOK' | 'IOC' | 'GTC';
@@ -2771,6 +2795,8 @@ export interface NewOrderListOTOParams {
   pendingSide: 'BUY' | 'SELL';
   pendingClientOrderId?: string;
   pendingPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: string;
   pendingStopPrice?: string;
   pendingTrailingDelta?: string;
   pendingQuantity: string;
@@ -2794,6 +2820,9 @@ export interface NewOrderListOTOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -2821,6 +2850,8 @@ export interface NewOrderListOTOCOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'GTC' | 'IOC' | 'FOK';
@@ -2831,6 +2862,8 @@ export interface NewOrderListOTOCOParams {
   pendingAboveType: 'LIMIT_MAKER' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT';
   pendingAboveClientOrderId?: string;
   pendingAbovePrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: string;
   pendingAboveStopPrice?: string;
   pendingAboveTrailingDelta?: string;
   pendingAboveIcebergQty?: string;
@@ -2840,6 +2873,8 @@ export interface NewOrderListOTOCOParams {
   pendingBelowType: 'LIMIT_MAKER' | 'STOP_LOSS' | 'STOP_LOSS_LIMIT';
   pendingBelowClientOrderId?: string;
   pendingBelowPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: string;
   pendingBelowStopPrice?: string;
   pendingBelowTrailingDelta?: string;
   pendingBelowIcebergQty?: string;
@@ -2862,6 +2897,9 @@ export interface NewOrderListOTOCOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -2890,6 +2928,8 @@ export interface NewOrderListOPOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'FOK' | 'IOC' | 'GTC';
@@ -2902,6 +2942,8 @@ export interface NewOrderListOPOParams {
   pendingSide: 'BUY' | 'SELL';
   pendingClientOrderId?: string;
   pendingPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: string;
   pendingStopPrice?: string;
   pendingTrailingDelta?: string;
   pendingIcebergQty?: string;
@@ -2927,6 +2969,9 @@ export interface NewOrderListOPOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;
@@ -2955,6 +3000,8 @@ export interface NewOrderListOPOCOParams {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: string;
   workingQuantity: string;
   workingIcebergQty?: string;
   workingTimeInForce?: 'GTC' | 'IOC' | 'FOK';
@@ -2972,6 +3019,8 @@ export interface NewOrderListOPOCOParams {
     | 'TAKE_PROFIT_LIMIT';
   pendingAboveClientOrderId?: string;
   pendingAbovePrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: string;
   pendingAboveStopPrice?: string;
   pendingAboveTrailingDelta?: string;
   pendingAboveIcebergQty?: string;
@@ -2988,6 +3037,8 @@ export interface NewOrderListOPOCOParams {
     | 'TAKE_PROFIT_LIMIT';
   pendingBelowClientOrderId?: string;
   pendingBelowPrice?: string;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: string;
   pendingBelowStopPrice?: string;
   pendingBelowTrailingDelta?: string;
   pendingBelowIcebergQty?: string;
@@ -3013,6 +3064,9 @@ export interface NewOrderListOPOCOResponse {
     clientOrderId: string;
   }[];
   orderReports: {
+    quoteNotionalLimit?: numberInString;
+    expiryReason?: SpotExpiryReason;
+    preventedMatches?: SpotOrderPreventedMatch[];
     symbol: string;
     orderId: number;
     orderListId: number;

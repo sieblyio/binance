@@ -1,43 +1,70 @@
-/**
- * Rounds a price to the correct number of decimal places based on the symbol's tick size
- */
-export function roundToTickSize(price: number, tickSize: string): number {
-  if (!tickSize) {
-    return price;
+/** Parse a decimal, including exponent notation, without floating-point scaling. */
+function parseDecimal(value: string): { coefficient: bigint; scale: number } {
+  const [mantissa, exponent = '0'] = value.toLowerCase().split('e');
+  const fraction = mantissa.split('.')[1] || '';
+  return {
+    coefficient: BigInt(mantissa.replace('.', '')),
+    scale: fraction.length - Number(exponent),
+  };
+}
+
+function floorToIncrement(value: number, increment: string): number {
+  if (!increment) {
+    return value;
   }
 
-  // Calculate precision from tick size (e.g., 0.00010000 → 4 decimal places)
-  const precision = tickSize.indexOf('1') - 1;
-  if (precision < 0) {
-    return Math.floor(price);
+  const decimalIncrement = increment.trim();
+  const incrementNumber = Number(decimalIncrement);
+  if (
+    !/^\+?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(decimalIncrement) ||
+    !Number.isFinite(incrementNumber) ||
+    !Number.isFinite(value)
+  ) {
+    throw new RangeError(
+      'Value must be finite and increment must be a nonnegative decimal',
+    );
   }
 
-  // Round to the nearest tick
-  const tickSizeNum = parseFloat(tickSize);
-  const rounded = Math.floor(price / tickSizeNum) * tickSizeNum;
+  const step = parseDecimal(decimalIncrement);
+  if (!Number.isSafeInteger(step.scale)) {
+    throw new RangeError('Increment exponent is outside the supported range');
+  }
 
-  // Format with correct precision
-  return +rounded.toFixed(precision);
+  // A zero tick/step disables the corresponding exchange filter.
+  if (step.coefficient === BigInt(0) || value === 0) {
+    return value;
+  }
+
+  const amount = parseDecimal(String(value));
+  const scale = Math.max(amount.scale, step.scale, 0);
+  const amountInteger =
+    amount.coefficient * BigInt('1' + '0'.repeat(scale - amount.scale));
+  const stepInteger =
+    step.coefficient * BigInt('1' + '0'.repeat(scale - step.scale));
+  let steps = amountInteger / stepInteger;
+
+  // BigInt division truncates toward zero; preserve mathematical floor for negatives.
+  if (amountInteger < BigInt(0) && amountInteger % stepInteger !== BigInt(0)) {
+    steps -= BigInt(1);
+  }
+
+  return Number(`${steps * stepInteger}e-${scale}`);
 }
 
 /**
- * Rounds a quantity to the correct step size
+ * Floors a price to a multiple of the tick size using decimal arithmetic.
+ * Empty or zero tick sizes leave it unchanged; invalid sizes or non-finite prices throw RangeError.
+ * Inputs and the returned number remain subject to JavaScript number precision limits.
+ */
+export function roundToTickSize(price: number, tickSize: string): number {
+  return floorToIncrement(price, tickSize);
+}
+
+/**
+ * Floors a quantity to a multiple of the step size using decimal arithmetic.
+ * Empty or zero step sizes leave it unchanged; invalid sizes or non-finite quantities throw RangeError.
+ * Inputs and the returned number remain subject to JavaScript number precision limits.
  */
 export function roundToStepSize(quantity: number, stepSize: string): number {
-  if (!stepSize) {
-    return quantity;
-  }
-
-  // Calculate precision from step size
-  const precision = stepSize.indexOf('1') - 1;
-  if (precision < 0) {
-    return Math.floor(quantity);
-  }
-
-  // Round to the nearest step
-  const stepSizeNum = parseFloat(stepSize);
-  const rounded = Math.floor(quantity / stepSizeNum) * stepSizeNum;
-
-  // Format with correct precision
-  return +rounded.toFixed(precision);
+  return floorToIncrement(quantity, stepSize);
 }
