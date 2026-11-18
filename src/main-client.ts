@@ -1026,13 +1026,13 @@ export class MainClient extends BaseRestClient {
   /**
    * Reduce the quantity of an existing open order while keeping its priority in the order book.
    * The new quantity must be less than the current quantity.
-   * https://binance-docs.github.io/apidocs/futures/en/#order-amend-keep-priority-trade
+   * https://binance-docs.github.io/apidocs/spot/en/#order-amend-keep-priority-trade
    */
   amendOrderKeepPriority(
     params: AmendKeepPriorityParams,
   ): Promise<SpotAmendKeepPriorityResult> {
     this.validateOrderId(params, 'newClientOrderId');
-    return this.putPrivate('fapi/v1/order/amend/keepPriority', params);
+    return this.putPrivate('api/v3/order/amend/keepPriority', params);
   }
 
   getOpenOrders(params?: { symbol?: string }): Promise<SpotOrder[]> {
