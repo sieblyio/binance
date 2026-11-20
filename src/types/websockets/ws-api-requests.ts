@@ -226,6 +226,8 @@ export interface WSAPINewSpotOrderRequest {
   price?: numberInString;
   quantity?: numberInString;
   quoteOrderQty?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: numberInString;
   newClientOrderId?: string;
   newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
   stopPrice?: numberInString;
@@ -247,6 +249,8 @@ export interface WSAPIOrderTestRequest {
   price?: numberInString;
   quantity?: numberInString;
   quoteOrderQty?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: numberInString;
   newClientOrderId?: string;
   stopPrice?: numberInString;
   trailingDelta?: number;
@@ -292,6 +296,8 @@ export interface WSAPIOrderCancelReplaceRequest {
   price?: numberInString;
   quantity?: numberInString;
   quoteOrderQty?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  quoteNotionalLimit?: numberInString;
   newClientOrderId?: string;
   newOrderRespType?: 'ACK' | 'RESULT' | 'FULL';
   stopPrice?: numberInString;
@@ -372,6 +378,8 @@ export interface WSAPIOrderListPlaceOCORequest {
   aboveClientOrderId?: string;
   aboveIcebergQty?: numberInString;
   abovePrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  aboveQuoteNotionalLimit?: numberInString;
   aboveStopPrice?: numberInString;
   aboveTrailingDelta?: number;
   aboveTimeInForce?: string;
@@ -386,6 +394,8 @@ export interface WSAPIOrderListPlaceOCORequest {
   belowClientOrderId?: string;
   belowIcebergQty?: numberInString;
   belowPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  belowQuoteNotionalLimit?: numberInString;
   belowStopPrice?: numberInString;
   belowTrailingDelta?: number;
   belowTimeInForce?: string;
@@ -406,6 +416,8 @@ export interface WSAPIOrderListPlaceOTORequest {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
   workingQuantity: numberInString;
   workingIcebergQty?: numberInString;
   workingTimeInForce?: string;
@@ -415,6 +427,8 @@ export interface WSAPIOrderListPlaceOTORequest {
   pendingSide: 'BUY' | 'SELL';
   pendingClientOrderId?: string;
   pendingPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: numberInString;
   pendingStopPrice?: numberInString;
   pendingTrailingDelta?: numberInString;
   pendingQuantity: numberInString;
@@ -435,6 +449,8 @@ export interface WSAPIOrderListPlaceOTOCORequest {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
   workingQuantity: numberInString;
   workingIcebergQty?: numberInString;
   workingTimeInForce?: string;
@@ -450,6 +466,8 @@ export interface WSAPIOrderListPlaceOTOCORequest {
     | 'TAKE_PROFIT_LIMIT';
   pendingAboveClientOrderId?: string;
   pendingAbovePrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: numberInString;
   pendingAboveStopPrice?: numberInString;
   pendingAboveTrailingDelta?: numberInString;
   pendingAboveIcebergQty?: numberInString;
@@ -464,6 +482,8 @@ export interface WSAPIOrderListPlaceOTOCORequest {
     | 'LIMIT_MAKER';
   pendingBelowClientOrderId?: string;
   pendingBelowPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: numberInString;
   pendingBelowStopPrice?: numberInString;
   pendingBelowTrailingDelta?: numberInString;
   pendingBelowIcebergQty?: numberInString;
@@ -483,6 +503,8 @@ export interface WSAPIOrderListPlaceOPORequest {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
   workingQuantity: numberInString;
   workingIcebergQty?: numberInString;
   workingTimeInForce?: string;
@@ -495,6 +517,8 @@ export interface WSAPIOrderListPlaceOPORequest {
   pendingSide: 'BUY' | 'SELL';
   pendingClientOrderId?: string;
   pendingPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingQuoteNotionalLimit?: numberInString;
   pendingStopPrice?: numberInString;
   pendingTrailingDelta?: numberInString;
   pendingIcebergQty?: numberInString;
@@ -517,6 +541,8 @@ export interface WSAPIOrderListPlaceOPOCORequest {
   workingSide: 'BUY' | 'SELL';
   workingClientOrderId?: string;
   workingPrice: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  workingQuoteNotionalLimit?: numberInString;
   workingQuantity: numberInString;
   workingIcebergQty?: numberInString;
   workingTimeInForce?: string;
@@ -534,6 +560,8 @@ export interface WSAPIOrderListPlaceOPOCORequest {
     | 'TAKE_PROFIT_LIMIT';
   pendingAboveClientOrderId?: string;
   pendingAbovePrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingAboveQuoteNotionalLimit?: numberInString;
   pendingAboveStopPrice?: numberInString;
   pendingAboveTrailingDelta?: numberInString;
   pendingAboveIcebergQty?: numberInString;
@@ -550,6 +578,8 @@ export interface WSAPIOrderListPlaceOPOCORequest {
     | 'TAKE_PROFIT_LIMIT';
   pendingBelowClientOrderId?: string;
   pendingBelowPrice?: numberInString;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  pendingBelowQuoteNotionalLimit?: numberInString;
   pendingBelowStopPrice?: numberInString;
   pendingBelowTrailingDelta?: numberInString;
   pendingBelowIcebergQty?: numberInString;

@@ -443,7 +443,9 @@ export interface WsAPITopicRequestParamMap<TWSKey = WsKey> {
   'userDataStream.start': { apiKey: string };
   'userDataStream.ping': WSAPIUserDataListenKeyRequest;
   'userDataStream.stop': WSAPIUserDataListenKeyRequest;
-  'userDataStream.subscribe': void;
+  'userDataStream.subscribe': void | {
+    filter?: { e?: string[]; s?: string[]; a?: string[]; x?: string[] };
+  };
   'userDataStream.subscribe.signature': { timestamp: number };
   'userDataStream.unsubscribe': void;
 

@@ -1,43 +1,35 @@
 /**
- * Rounds a price to the correct number of decimal places based on the symbol's tick size
+ * Floors a value to a multiple of the increment (tick or step size string, e.g. "0.05000000").
+ * Works on scaled integers to avoid float noise. Empty or zero increments return the value unchanged.
  */
-export function roundToTickSize(price: number, tickSize: string): number {
-  if (!tickSize) {
-    return price;
+function floorToIncrement(value: number, increment: string): number {
+  const incrementNum = parseFloat(increment);
+  if (!increment || !incrementNum) {
+    return value;
   }
 
-  // Calculate precision from tick size (e.g., 0.00010000 → 4 decimal places)
-  const precision = tickSize.indexOf('1') - 1;
-  if (precision < 0) {
-    return Math.floor(price);
-  }
+  // Decimals from the increment string, ignoring trailing zeros (e.g. "0.05000000" → 2)
+  const decimals = (increment.split('.')[1] || '').replace(/0+$/, '').length;
+  const factor = 10 ** decimals;
 
-  // Round to the nearest tick
-  const tickSizeNum = parseFloat(tickSize);
-  const rounded = Math.floor(price / tickSizeNum) * tickSizeNum;
+  // toFixed trims float noise (0.29 * 100 = 28.999999999999996) before flooring
+  const scaledValue = Math.floor(+(value * factor).toFixed(6));
+  const scaledIncrement = Math.round(incrementNum * factor);
+  const floored = Math.floor(scaledValue / scaledIncrement) * scaledIncrement;
 
-  // Format with correct precision
-  return +rounded.toFixed(precision);
+  return +(floored / factor).toFixed(decimals);
 }
 
 /**
- * Rounds a quantity to the correct step size
+ * Rounds a price down to a multiple of the symbol's tick size
+ */
+export function roundToTickSize(price: number, tickSize: string): number {
+  return floorToIncrement(price, tickSize);
+}
+
+/**
+ * Rounds a quantity down to a multiple of the symbol's step size
  */
 export function roundToStepSize(quantity: number, stepSize: string): number {
-  if (!stepSize) {
-    return quantity;
-  }
-
-  // Calculate precision from step size
-  const precision = stepSize.indexOf('1') - 1;
-  if (precision < 0) {
-    return Math.floor(quantity);
-  }
-
-  // Round to the nearest step
-  const stepSizeNum = parseFloat(stepSize);
-  const rounded = Math.floor(quantity / stepSizeNum) * stepSizeNum;
-
-  // Format with correct precision
-  return +rounded.toFixed(precision);
+  return floorToIncrement(quantity, stepSize);
 }

@@ -121,6 +121,26 @@ export type SelfTradePreventionMode =
   | 'DECREMENT'
   | 'TRANSFER';
 
+/** Spot expiry reasons. Unknown strings remain supported for forward compatibility. */
+export type SpotExpiryReason =
+  | 'NONE'
+  | 'REJECTED'
+  | 'EXCHANGE_CANCELED'
+  | 'OCO_TRIGGER'
+  | 'OTO_PHASE_ONE_EXPIRED'
+  | 'UNFILLED_IOC_QUANTITY_EXPIRED'
+  | 'UNFILLED_FOK_ORDER_EXPIRED'
+  | 'INSUFFICIENT_LIQUIDITY'
+  | 'EXECUTION_RULE_PRICE_RANGE_EXCEEDED'
+  | 'EXHAUSTED'
+  | 'INSUFFICIENT_QUOTE_NOTIONAL_LIMIT'
+  | (string & Record<never, never>);
+
+export type SpotEffectiveSelfTradePreventionMode =
+  | 'EXPIRE_MAKER'
+  | 'EXPIRE_BOTH'
+  | 'DECREMENT';
+
 export interface BasicAssetParam {
   asset: string;
 }
@@ -287,6 +307,8 @@ export interface NewOrderListParams<
   aboveClientOrderId?: string;
   aboveIcebergQty?: number;
   abovePrice?: number;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  aboveQuoteNotionalLimit?: number;
   aboveStopPrice?: number;
   aboveTrailingDelta?: number;
   aboveTimeInForce?: OrderTimeInForce;
@@ -296,6 +318,8 @@ export interface NewOrderListParams<
   belowClientOrderId?: string;
   belowIcebergQty?: number;
   belowPrice?: number;
+  /** BUY only; Binance has not decided when this feature will be enabled. */
+  belowQuoteNotionalLimit?: number;
   belowStopPrice?: number;
   belowTrailingDelta?: number;
   belowTimeInForce?: OrderTimeInForce;

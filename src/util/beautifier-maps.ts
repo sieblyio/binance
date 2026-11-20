@@ -473,6 +473,7 @@ export const BEAUTIFIER_EVENT_MAP = {
   serverShutdownEvent: {
     e: 'eventType',
     E: 'eventTime',
+    T: 'shutdownTime',
   },
   updateData: {
     m: 'updateEventType',
@@ -544,6 +545,8 @@ export const BEAUTIFIER_EVENT_MAP = {
     W: 'workingTime',
     V: 'selfTradePreventionMode',
     eR: 'expiryReason',
+    eV: 'effectiveSelfTradePreventionMode',
+    Qq: 'quoteNotionalLimit',
     d: 'trailingDelta',
     v: 'preventedMatchId',
     D: 'trailingTime',

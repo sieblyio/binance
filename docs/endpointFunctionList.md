@@ -76,7 +76,7 @@ This table includes all endpoints from the official Exchange API docs and corres
 | [cancelOrder()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1007) | :closed_lock_with_key:  | DELETE | `api/v3/order` |
 | [cancelAllSymbolOrders()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1011) | :closed_lock_with_key:  | DELETE | `api/v3/openOrders` |
 | [replaceOrder()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1017) | :closed_lock_with_key:  | POST | `api/v3/order/cancelReplace` |
-| [amendOrderKeepPriority()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1031) | :closed_lock_with_key:  | PUT | `fapi/v1/order/amend/keepPriority` |
+| [amendOrderKeepPriority()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1031) | :closed_lock_with_key:  | PUT | `api/v3/order/amend/keepPriority` |
 | [getOpenOrders()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1038) | :closed_lock_with_key:  | GET | `api/v3/openOrders` |
 | [getAllOrders()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1042) | :closed_lock_with_key:  | GET | `api/v3/allOrders` |
 | [submitNewOCO()](https://github.com/sieblyio/binance/blob/master/src/main-client.ts#L1049) | :closed_lock_with_key:  | POST | `api/v3/order/oco` |

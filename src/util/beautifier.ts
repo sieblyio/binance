@@ -120,6 +120,7 @@ export default class Beautifier {
       'qty',
       'quoteAssetVolume',
       'quoteVolume',
+      'quoteNotionalLimit',
       'quoteVolumeActive',
       'realisedProfit',
       'sellerCommission',

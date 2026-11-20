@@ -21,6 +21,8 @@ import {
   OrderTimeInForce,
   OrderType,
   SelfTradePreventionMode,
+  SpotEffectiveSelfTradePreventionMode,
+  SpotExpiryReason,
 } from '../shared';
 import { WsSharedBase } from './ws-general';
 
@@ -247,7 +249,11 @@ export interface WsMessageSpotUserDataExecutionReportEventRaw
   W: number;
   V: SelfTradePreventionMode;
   /** Expiry reason when present (user data executionReport). */
-  eR?: string;
+  eR?: SpotExpiryReason;
+  /** Only present on prevented-match reports when the applied STP mode differs from the order's own selfTradePreventionMode. */
+  eV?: SpotEffectiveSelfTradePreventionMode;
+  /** Present only when the order has a quote notional limit. */
+  Qq?: numberInString;
   d?: number;
   v?: number;
   D?: number;
@@ -281,6 +287,8 @@ export interface WsMessagePortfolioMarginProAccountUpdateRaw
 export interface WsMessageWsapiServerShutdownRaw extends WsSharedBase {
   e: 'serverShutdown';
   E: number;
+  /** Time when the WebSocket session will shut down. */
+  T?: number;
 }
 
 export interface OrderObjectRaw {
