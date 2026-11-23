@@ -4926,6 +4926,16 @@ export interface GetPortfolioMarginProCollateralRateResponse {
   collateralRate: string;
 }
 
+export interface GetPortfolioMarginRetailTieredCollateralRateResponse {
+  asset: string;
+  collateralInfo: {
+    tierFloor: string;
+    tierCap: string;
+    collateralRate: string;
+    cum: string;
+  }[];
+}
+
 export interface GetPortfolioMarginProBankruptcyLoanAmountResponse {
   asset: string;
   amount: string;

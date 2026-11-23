@@ -20,6 +20,7 @@ import {
 
 export type FuturesContractType =
   | 'PERPETUAL'
+  | 'TRADIFI_PERPETUAL'
   | 'CURRENT_MONTH'
   | 'NEXT_MONTH'
   | 'CURRENT_QUARTER'
@@ -269,6 +270,7 @@ export interface GetForceOrdersParams {
 
 export type ContactType =
   | 'PERPETUAL'
+  | 'TRADIFI_PERPETUAL'
   | 'CURRENT_MONTH'
   | 'NEXT_MONTH'
   | 'CURRENT_QUARTER'
@@ -349,7 +351,16 @@ export interface FuturesSymbolExchangeInfo {
   quantityPrecision: number;
   baseAssetPrecision: number;
   quotePrecision: number;
-  underlyingType: 'COIN' | 'INDEX'; // No other known values
+  underlyingType:
+    | 'COIN'
+    | 'INDEX'
+    | 'EQUITY'
+    | 'HK_EQUITY'
+    | 'COMMODITY'
+    | 'KR_EQUITY'
+    | 'PREMARKET'
+    | 'CN_EQUITY'
+    | 'FX';
   underlyingSubType: string[]; // DEFI / NFT / BSC / HOT / etc
   settlePlan: number;
   triggerProtect: numberInString;

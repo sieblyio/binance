@@ -326,6 +326,7 @@ import {
   GetPortfolioMarginProCollateralRateResponse,
   GetPortfolioMarginProInterestHistoryParams,
   GetPortfolioMarginProInterestHistoryResponse,
+  GetPortfolioMarginRetailTieredCollateralRateResponse,
   GetRateHistory,
   GetRateHistoryParams,
   GetRwusdRateHistoryParams,
@@ -4173,6 +4174,16 @@ export class MainClient extends BaseRestClient {
     GetPortfolioMarginProCollateralRateResponse[]
   > {
     return this.get('sapi/v1/portfolio/collateralRate');
+  }
+
+  /**
+   * Get Portfolio Margin retail tiered collateral rates. Requires an API key.
+   * https://developers.binance.com/docs/derivatives/portfolio-margin-pro/market-data
+   */
+  getPortfolioMarginRetailTieredCollateralRate(): Promise<
+    GetPortfolioMarginRetailTieredCollateralRateResponse[]
+  > {
+    return this.get('sapi/v2/portfolio/retail/collateralRate');
   }
 
   getPortfolioMarginProTieredCollateralRate(): Promise<any[]> {
