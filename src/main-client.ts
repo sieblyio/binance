@@ -201,6 +201,8 @@ import {
   FlexibleRewardsHistory,
   FlexibleSubscriptionPreview,
   ForceLiquidationRecord,
+  FpslRequestParams,
+  FpslSwitchResponse,
   FundingAsset,
   FutureAccountTransfer,
   FuturesPositionRisk,
@@ -262,6 +264,14 @@ import {
   GetFlexibleSubscriptionRecordParams,
   GetFlexibleSubscriptionRecordResponse,
   GetForceLiquidationRecordParams,
+  GetFpslDisclaimerParams,
+  GetFpslDisclaimerResponse,
+  GetFpslOnLoanParams,
+  GetFpslOnLoanResponse,
+  GetFpslOverviewResponse,
+  GetFpslStatusResponse,
+  GetFpslSymbolHistoryParams,
+  GetFpslSymbolHistoryResponse,
   GetFutureAccountTransferHistoryParams,
   GetFuturesLeadTraderStatusResponse,
   GetFuturesLeadTradingSymbolWhitelistResponse,
@@ -631,6 +641,8 @@ import {
   SubmitConvertLimitOrderParams,
   SubmitDepositCreditParams,
   SubmitDepositCreditResponse,
+  SubmitFpslEnrollParams,
+  SubmitFpslEnrollResponse,
   SubmitHashrateResaleParams,
   SubmitIndexLinkedPlanRedemptionParams,
   SubmitMarginOTOCOOrderParams,
@@ -4153,6 +4165,92 @@ export class MainClient extends BaseRestClient {
 
   /**
    *
+   * FPSL (Fully Paid Securities Lending)
+   *
+   **/
+
+  /**
+   * Get the FPSL disclaimer, eligibility criteria and opt-in status.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  getFpslDisclaimer(
+    params?: GetFpslDisclaimerParams,
+  ): Promise<GetFpslDisclaimerResponse> {
+    return this.getPrivate('sapi/v1/equity/fpsl/disclaimer', params);
+  }
+
+  /**
+   * Enroll in FPSL and agree to the disclaimer.
+   * Send at least one declaration; at least one must be true for eligibility.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  submitFpslEnroll(
+    params: SubmitFpslEnrollParams,
+  ): Promise<SubmitFpslEnrollResponse> {
+    return this.postPrivate('sapi/v1/equity/fpsl/enroll', params);
+  }
+
+  /**
+   * Get FPSL status and switch limits.
+   * The response body is empty if the user has never opted in.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  getFpslStatus(
+    params?: FpslRequestParams,
+  ): Promise<GetFpslStatusResponse | ''> {
+    return this.getPrivate('sapi/v1/equity/fpsl/status', params);
+  }
+
+  /**
+   * Turn off FPSL and stop new lending immediately.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  submitFpslSwitchClose(
+    params?: FpslRequestParams,
+  ): Promise<FpslSwitchResponse> {
+    return this.postPrivate('sapi/v1/equity/fpsl/switch/close', params);
+  }
+
+  /**
+   * Turn FPSL back on.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  submitFpslSwitchOpen(
+    params?: FpslRequestParams,
+  ): Promise<FpslSwitchResponse> {
+    return this.postPrivate('sapi/v1/equity/fpsl/switch/open', params);
+  }
+
+  /**
+   * Get a T-1 snapshot of securities lending and earned interest.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  getFpslOverview(
+    params?: FpslRequestParams,
+  ): Promise<GetFpslOverviewResponse> {
+    return this.getPrivate('sapi/v1/equity/fpsl/overview', params);
+  }
+
+  /**
+   * Get stocks on loan grouped by US Eastern date, in descending order.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  getFpslOnLoan(params: GetFpslOnLoanParams): Promise<GetFpslOnLoanResponse> {
+    return this.getPrivate('sapi/v1/equity/fpsl/on-loan', params);
+  }
+
+  /**
+   * Get paginated loan history for an equity asset.
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-fpsl/api/rest-api/account
+   */
+  getFpslSymbolHistory(
+    params: GetFpslSymbolHistoryParams,
+  ): Promise<GetFpslSymbolHistoryResponse> {
+    return this.getPrivate('sapi/v1/equity/fpsl/symbol/history', params);
+  }
+
+  /**
+   *
    * DERIVATIVES - Portfolio Margin Pro - Market Data
    * This is in mainclient because it shares the same base url
    *
@@ -4177,8 +4275,8 @@ export class MainClient extends BaseRestClient {
   }
 
   /**
-   * Get Portfolio Margin retail tiered collateral rates. Requires an API key.
-   * https://developers.binance.com/docs/derivatives/portfolio-margin-pro/market-data
+   * Get Portfolio Margin retail tiered collateral rates (MARKET_DATA, API key only).
+   * https://developers.binance.com/en/docs/catalog/advanced-trading-derivatives-trading-portfolio-margin-pro/api/rest-api/market-data
    */
   getPortfolioMarginRetailTieredCollateralRate(): Promise<
     GetPortfolioMarginRetailTieredCollateralRateResponse[]
