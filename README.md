@@ -99,8 +99,10 @@ ws.subscribeSpotUserDataStream();
     - [Best practice](#best-practice)
   - [Customise Logging](#customise-logging)
   - [Frontend Usage](#browserfrontend-usage)
-    - [Import](#import)
-    - [Webpack](#webpack)
+    - [Vite and React](#vite-and-react)
+    - [Next.js and server-side requests](#nextjs-and-server-side-requests)
+    - [React Native and Expo](#react-native-and-expo)
+    - [Standalone Webpack bundle](#standalone-webpack-bundle)
 - [LLMs & AI](#use-with-llms--ai)
 - [Contributions & Thanks](#contributions--thanks)
 
@@ -794,43 +796,37 @@ const ws = new WebsocketClient(
 
 ## Browser/Frontend Usage
 
-### Import
+The npm package includes a CommonJS build that frontend bundlers can import. You do not need to build the SDK's standalone Webpack bundle to use it in a frontend project. Choose the setup for your application below.
 
-This is the "modern" way, allowing the package to be directly imported into frontend projects with full typescript support.
+### Vite and React
 
-1. Install these dependencies
-   ```sh
-   npm install crypto-browserify stream-browserify
-   ```
-2. Add this to your `tsconfig.json`
-   ```json
-   {
-     "compilerOptions": {
-       "paths": {
-         "crypto": [
-           "./node_modules/crypto-browserify"
-         ],
-         "stream": [
-           "./node_modules/stream-browserify"
-         ]
-   }
-   ```
-3. Declare this in the global context of your application (ex: in polyfills for angular)
-   ```js
-   (window as any).global = window;
-   ```
+Use the [Vite guide](https://sieblyio.github.io/docs/binance/environments/vite.html) or [React guide](https://sieblyio.github.io/docs/binance/environments/react.html) for a complete public market-data project that imports `binance` from npm.
 
-### Webpack
+Keep the supplied bundler configuration with the example: it provides EventEmitter and replaces the SDK's Node crypto signing module (`node-support`) with `browser-support`. These browser examples use public Binance market data. Keep private keys and API credentials in a secure server-side environment and make authenticated calls there.
 
-This is the "old" way of using this package on webpages. This will build a minified js bundle that can be pulled in using a script tag on a website.
+Browser REST requests also depend on Binance's CORS policy and regional restrictions. If a request is blocked, call the SDK through your application's server route instead. A development proxy does not solve CORS for a deployed application.
 
-Build a bundle using webpack:
+### Next.js and server-side requests
 
-- `npm install`
-- `npm build`
-- `npm pack`
+The [Next.js guide](https://sieblyio.github.io/docs/binance/environments/next.html) runs the SDK in a Node.js Route Handler and returns the result to the frontend. Use this pattern when requests need credentials or cannot be made directly from the browser.
 
-The bundle can be found in `dist/`. Altough usage should be largely consistent, smaller differences will exist. Documentation is still TODO.
+### React Native and Expo
+
+Follow the [Expo guide](https://sieblyio.github.io/docs/binance/environments/expo.html) for its Metro configuration, browser-support resolver and required polyfills, including `events`, `buffer`, `https-browserify`, `stream-http` and `url`. Browser bundler configuration is not interchangeable with Metro configuration. The example uses public Binance market data; keep authenticated operations on your server.
+
+### Standalone Webpack bundle
+
+If you need a standalone UMD bundle rather than npm imports in your application, the SDK repository includes a [Webpack configuration](./webpack/webpack.config.js). From a checkout of this repository:
+
+```sh
+npm install
+npm run build
+npm run pack
+```
+
+The configuration writes `dist/binanceapi.js` with the `binanceapi` global name. This is a separate packaging option, not a required step for the framework guides above. Browser-specific configuration and API access restrictions still apply.
+
+Older browser setups that resolve the Node crypto implementation used `crypto-browserify` and `stream-browserify` polyfills. The supplied Webpack configuration instead aliases `node-support` to `browser-support` and disables Node's `http` and `https` modules; it does not configure those legacy polyfills.
 
 ## Use with LLMs & AI
 

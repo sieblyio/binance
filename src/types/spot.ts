@@ -4904,6 +4904,133 @@ export interface GetSpotAlgoSubOrdersResponse {
   subOrders: SpotSubOrder[];
 }
 
+/** FPSL signed requests; timestamp and signature are supplied by the client. */
+export interface FpslRequestParams {
+  /** Cannot exceed 60000 milliseconds. */
+  recvWindow?: number;
+}
+
+export interface GetFpslDisclaimerParams extends FpslRequestParams {
+  /** Language of the copy. Defaults to en. */
+  locale?: string;
+}
+
+export interface GetFpslDisclaimerResponse {
+  isOptedIn: boolean;
+  title: string;
+  body: string;
+  confirmations: {
+    key: string;
+    required: boolean;
+    text: string;
+  }[];
+  eligibilityPrompt: string;
+  eligibilityRule: string;
+  eligibilityCriteria: {
+    key: string;
+    text: string;
+  }[];
+  legalLinks: {
+    key: string;
+    url: string;
+  }[];
+  ctaText: string;
+}
+
+export interface SubmitFpslEnrollParams extends FpslRequestParams {
+  /** Declare a Spot + Funding account balance of at least US$2,500. */
+  q1BalanceDeclared?: boolean;
+  /** Declare annual income of at least US$20,000. */
+  q2IncomeDeclared?: boolean;
+  /** Declare liquid assets or net worth of at least US$20,000. */
+  q3LiquidAssetsDeclared?: boolean;
+  /** Declare more than one year of stock investing experience. */
+  q4ExperienceDeclared?: boolean;
+}
+
+export interface SubmitFpslEnrollResponse {
+  enrolled: boolean;
+  /** Returned on success; milliseconds. */
+  consentedAt?: number;
+  /** Returned on success. */
+  fpslStatus?: string;
+  /** Returned on failure. */
+  passReasons?: string[];
+  /** Returned on failure. */
+  failureReasons?: string[];
+  /** Balance threshold in USD, returned on failure. */
+  q1Threshold?: string;
+}
+
+export interface GetFpslStatusResponse {
+  fpslStatus: string;
+  tierId: string;
+  rateLimit: {
+    dailyRemaining: number;
+    dailyMax: number;
+    cooldownSecondsLeft: number;
+  };
+}
+
+export interface FpslSwitchResponse {
+  fpslStatus: string;
+  /** Status change time in milliseconds. */
+  changedAt: number;
+}
+
+export interface GetFpslOverviewResponse {
+  stocksOnLoan: number;
+  totalInterest: string;
+  /** Last execution time in milliseconds; absent if nothing has settled. */
+  lastExecutedAt?: number;
+  currency: string;
+}
+
+export interface GetFpslOnLoanParams extends FpslRequestParams {
+  /** Inclusive date in America/New_York, formatted YYYY-MM-DD. */
+  startDate: string;
+  /** Inclusive date in the same format; span is at most 60 days by default. */
+  endDate: string;
+}
+
+export interface GetFpslOnLoanResponse {
+  startDate: string;
+  endDate: string;
+  days: {
+    date: string;
+    items: {
+      assetCode: string;
+      quantity: string;
+    }[];
+  }[];
+  /** Returned only when the range includes the current US Eastern date. */
+  today?: {
+    nyTodayDate: string;
+    nyTomorrowDate: string;
+  };
+}
+
+export interface GetFpslSymbolHistoryParams extends FpslRequestParams {
+  /** Equity asset code, e.g. EQ_AAPL. Maximum length: 64. */
+  assetCode: string;
+  /** Starts at 1. Default: 1. */
+  page?: number;
+  /** Range: 1-100. Default: 20. */
+  size?: number;
+}
+
+export interface GetFpslSymbolHistoryResponse {
+  assetCode: string;
+  items: {
+    /** Unix timestamp in milliseconds of midnight in America/New_York. */
+    date: number;
+    quantity: string;
+  }[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 export interface GetPortfolioMarginProAccountInfoResponse {
   uniMMR: string;
   accountEquity: string;
@@ -4924,6 +5051,16 @@ export interface SwitchPortfolioDeltaModeParams {
 export interface GetPortfolioMarginProCollateralRateResponse {
   asset: string;
   collateralRate: string;
+}
+
+export interface GetPortfolioMarginRetailTieredCollateralRateResponse {
+  asset: string;
+  collateralInfo: {
+    tierFloor: string;
+    tierCap: string;
+    collateralRate: string;
+    cum: string;
+  }[];
 }
 
 export interface GetPortfolioMarginProBankruptcyLoanAmountResponse {
